@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Editor V18.2: Color Fix</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #121212; font-family: 'Segoe UI', sans-serif; color: #ccc; user-select: none; }
+        canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+        
+        /* MENU SUPERIOR */
+        #main-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 30px;
+            background: #252525; border-bottom: 1px solid #333;
+            display: flex; align-items: center; padding: 0 10px; box-sizing: border-box;
+            z-index: 100; font-size: 12px;
+        }
+        .menu-dropdown { 
+            position: relative; cursor: pointer; padding: 0 10px; color: #eee; 
+            height: 100%; display: flex; align-items: center; 
+        }
+        .menu-dropdown:hover { background: #444; }
+        .menu-content { 
+            display: none; position: absolute; top: 100%; left: 0; 
+            background: #2d2d2d; border: 1px solid #444; min-width: 200px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+        }
+        .menu-dropdown:hover .menu-content { display: block; }
+        .menu-item { padding: 8px 15px; cursor: pointer; border-bottom: 1px solid #333; }
+        .menu-item:hover { background: #007acc; color: #fff; }
+        #project-name { margin-left: 20px; font-weight: bold; color: #ffd700; flex: 1; text-align: center; }
+
+        /* PANEL LATERAL */
+        #ui-panel { position: absolute; top: 30px; right: 0; width: 440px; height: calc(100vh - 30px); background: #1e1e1e; border-left: 1px solid #333; display: flex; flex-direction: column; z-index: 10; }
+        #ui-content { flex: 1; overflow-y: auto; padding: 10px; scrollbar-width: thin; scrollbar-color: #444 #222; }
+
+        /* BOTONES */
+        .btn { padding: 6px; border: none; border-radius: 3px; font-weight: bold; cursor: pointer; font-size: 11px; text-transform: uppercase; color: #fff; margin-bottom: 4px; display:flex; justify-content:center; align-items:center; }
+        .btn:hover { filter: brightness(1.1); }
+        .btn-new { background: #444; border: 1px dashed #666; width: 100%; padding: 10px; margin-bottom: 10px; }
+        .btn-purple { background: #7b1fa2; width: 100%; }
+        .btn-upload { background: #2e7d32; width: 100%; }
+        .btn-graph { background: #00897b; width:auto; padding: 2px 6px; font-size: 10px; margin-left: auto; border-radius: 2px; }
+        .btn-copy { background: #555; width:auto; padding: 4px 8px; font-size: 10px; margin-left:2px; }
+        .btn-blue { background: #1565c0; width: auto; padding: 4px 8px; font-size: 10px; margin-right: 5px; }
+        
+        /* POWER BUTTON */
+        .btn-power {
+            width: 20px; height: 20px; border-radius: 50%; border: 2px solid #555;
+            background: #222; color: #555; font-size: 12px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s; margin-right: 8px;
+        }
+        .btn-power.active {
+            border-color: #00e676; background: #00e676; color: #000; box-shadow: 0 0 8px #00e676;
+        }
+
+        /* CAPAS */
+        .layer-container { background: #2a2a2a; border: 1px solid #383838; border-radius: 4px; margin-bottom: 6px; }
+        .sub-layer-container { background: #151019; border-left: 3px solid #ab47bc; margin: 5px; padding: 5px; border-radius: 4px; }
+        summary { padding: 5px; background: #2d2d2d; cursor: pointer; display: flex; align-items: center; justify-content: space-between; height: 32px; }
+        .layer-left, .layer-right { display: flex; align-items: center; gap: 8px; }
+        .icon-btn { cursor: pointer; opacity: 0.8; font-size: 18px; padding: 4px; line-height: 1; }
+        .icon-btn:hover { opacity: 1; transform: scale(1.1); background: #444; border-radius: 4px; }
+        .layer-controls { padding: 8px; background: #222; border-top: 1px solid #333; }
+
+        /* CONTROLES */
+        .control-row { display: flex; gap: 5px; align-items: center; margin-bottom: 5px; }
+        select, input[type="text"] { background: #333; color: #eee; border: 1px solid #444; padding: 3px; font-size: 11px; flex: 1; }
+        .control-group { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #333; }
+        .group-label { font-size: 10px; color: #777; text-transform: uppercase; font-weight: 800; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+        
+        .control { display: flex; align-items: center; margin-bottom: 4px; font-size: 11px; position: relative; transition: opacity 0.3s; }
+        .control label { flex: 0 0 70px; color: #aaa; z-index: 2; }
+        .control input[type="range"] { flex: 1; margin: 0 5px; accent-color: #ffd700; height: 4px; background: #444; border-radius: 2px; appearance: none; cursor: pointer; z-index: 2; }
+        .control input[type="number"] { width: 45px; background: #111; border: 1px solid #444; color: #ffd700; text-align: right; padding: 2px; z-index: 2; }
+        
+        /* LIVE BAR */
+        .live-bar {
+            position: absolute; left: 75px; top: 50%; transform: translateY(-50%);
+            height: 4px; background: #00e676; z-index: 1; pointer-events: none;
+            opacity: 0; transition: width 0.05s linear; border-radius: 2px;
+        }
+
+        .disabled-control { opacity: 0.3; pointer-events: none; filter: grayscale(1); }
+        .sub-layer-container input[type="range"] { accent-color: #e040fb; }
+        .sub-layer-container input[type="number"] { color: #ea80fc; }
+
+        /* GRAPH WINDOW */
+        #graph-window { position: absolute; top: 100px; left: 100px; width: 500px; height: 380px; background: #222; border: 1px solid #555; box-shadow: 0 10px 30px rgba(0,0,0,0.8); display: none; flex-direction: column; z-index: 500; }
+        #graph-header { padding: 8px; background: #333; border-bottom: 1px solid #444; cursor: move; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 12px; color: #eee; }
+        #graph-body { flex: 1; position: relative; background: #151515; }
+        #graph-footer { padding: 8px; background: #2a2a2a; border-top: 1px solid #444; display: flex; gap: 10px; align-items: center; font-size: 11px; flex-wrap: wrap; }
+        
+        .graph-label-y { position: absolute; left: 5px; font-size: 10px; color: #aaa; pointer-events: none; font-family: monospace; z-index: 10; text-shadow: 1px 1px 0 #000; }
+        #graph-max-val { top: 5px; }
+        #graph-mid-val { top: 50%; transform: translateY(-50%); color: #666; }
+        #graph-min-val { bottom: 5px; }
+
+        /* MODAL */
+        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: center; justify-content: center; }
+        #modal-box { background: #222; border: 1px solid #444; width: 350px; max-height: 80vh; padding: 20px; display: flex; flex-direction: column; }
+        #modal-list { flex: 1; overflow-y: auto; margin: 10px 0; border: 1px solid #333; max-height: 300px; }
+        .preset-item { padding: 8px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
+        .preset-item:hover { background: #333; }
+        .preset-actions { display: flex; gap: 5px; }
+
+        #ctx-menu { display:none; position:fixed; background:#333; border:1px solid #555; padding:5px; z-index:300; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+        .ctx-item { padding:5px 10px; cursor:pointer; font-size:11px; color:#eee; }
+        .ctx-item:hover { background:#555; }
+
+        #hidden-file-input, #hidden-seq-input, #hidden-json-input { display: none; }
+        #emitter-marker { position: absolute; width: 14px; height: 14px; border: 2px solid #ffd700; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 10px #ffd700; z-index: 5; }
+        #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #ffd700; color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 12px; opacity: 0; transition: opacity 0.3s; z-index: 200; }
+        
+        #graph-color-picker { width: 30px; height: 20px; border: 1px solid #555; background: none; cursor: pointer; padding: 0; }
+    </style>
+</head>
+<body>
+
+    <nav id="main-menu">
+        <div class="menu-dropdown">
+            <span>📁 ARCHIVOS</span>
+            <div class="menu-content">
+                <div class="menu-item" onclick="app.newPreset()">📄 Nuevo</div>
+                <div class="menu-item" onclick="app.loadPresetWindow()">📂 Cargar / Mezclar</div>
+                <div class="menu-item" onclick="app.savePreset(false)">💾 Guardar Global</div>
+                <div class="menu-item" onclick="app.savePreset(true)">💾 Guardar Como...</div>
+                <div class="menu-item" onclick="document.getElementById('hidden-json-input').click()">⬆️ Importar JSON</div>
+                <div class="menu-item" onclick="app.exportJSON()">⬇️ Exportar JSON</div>
+            </div>
+        </div>
+        <div id="project-name">Sin Título</div>
+    </nav>
+
+    <div id="emitter-marker"></div>
+    <div id="toast">Notificación</div>
+    
+    <div id="ctx-menu">
+        <div class="ctx-item" id="ctx-rename">Cambiar Nombre</div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+
+    <div id="graph-window">
+        <div id="graph-header">
+            <div style="display:flex; align-items:center">
+                <div id="graph-power" class="btn-power" onclick="GraphEditor.togglePower()">⏻</div>
+                <span id="graph-title">Gráfica</span>
+            </div>
+            <button class="btn btn-copy" style="width:20px; height:20px; padding:0;" onclick="document.getElementById('graph-window').style.display='none'">x</button>
+        </div>
+        <div id="graph-body">
+            <div id="graph-max-val" class="graph-label-y">1.0</div>
+            <div id="graph-mid-val" class="graph-label-y">0.0</div>
+            <div id="graph-min-val" class="graph-label-y">-1.0</div>
+            <canvas id="graph-canvas" width="500" height="310" style="width:100%; height:100%"></canvas>
+        </div>
+        <div id="graph-footer">
+            <label style="display:flex; align-items:center" id="lbl-link"><input type="checkbox" id="chk-link" onchange="GraphEditor.updateConfig()"> Link Vida</label>
+            <label style="display:flex; align-items:center"><input type="checkbox" id="chk-loop" onchange="GraphEditor.updateConfig()"> Loop</label>
+            
+            <div style="width:1px; height:20px; background:#444; margin:0 5px;"></div>
+            
+            <label>Val Y:</label>
+            <input type="number" id="inp-point-y" step="0.1" style="width:50px; background:#111; color:#00bcd4; border:1px solid #444" onchange="GraphEditor.updatePointValue()">
+
+            <div id="box-color-picker" style="display:none; align-items:center; margin-left:5px; gap:5px; border-left:1px solid #444; padding-left:5px;">
+                <label>Color:</label>
+                <input type="color" id="graph-color-picker" oninput="GraphEditor.updatePointColor()">
+            </div>
+
+            <div style="flex:1"></div>
+            <label>Duración (s):</label>
+            <input type="number" id="inp-duration" value="1.0" step="0.1" style="width:50px; background:#111; color:#eee; border:1px solid #444" onchange="GraphEditor.updateConfig()">
+        </div>
+    </div>
+
+    <div id="modal-overlay">
+        <div id="modal-box">
+            <h2 style="margin:0 0 10px 0; color:#ffd700; text-align:center">Gestor de Presets</h2>
+            <div id="modal-list"></div>
+            <button class="btn btn-purple" onclick="document.getElementById('modal-overlay').style.display='none'">Cerrar</button>
+        </div>
+    </div>
+
+    <div id="ui-panel">
+        <div id="ui-content">
+            <button class="btn btn-new" id="add-layer-btn">➕ Nueva Capa Base</button>
+            <div id="layers-list"></div>
+        </div>
+    </div>
+
+    <input type="file" id="hidden-file-input" accept="image/png, image/jpeg, image/webp">
+    <input type="file" id="hidden-seq-input" accept="image/png, image/jpeg, image/webp" multiple>
+    <input type="file" id="hidden-json-input" accept=".json">
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const layersList = document.getElementById('layers-list');
+        const marker = document.getElementById('emitter-marker');
+        const toastEl = document.getElementById('toast');
+        const projectNameEl = document.getElementById('project-name');
+        
+        // HELPER CANVAS FOR TINTING
+        const helperCanvas = document.createElement('canvas');
+        const helperCtx = helperCanvas.getContext('2d');
+        helperCanvas.width = 128; helperCanvas.height = 128; // Small buffer
+
+        let width, height;
+        let particles = [], layers = [], lastTime = 0, currentPresetName = null, globalTime = 0;
+        const emitter = { x: window.innerWidth / 2, y: window.innerHeight / 2, isDragging: false };
+        let contextTarget = null;
+
+        function showToast(msg) { toastEl.innerText = msg; toastEl.style.opacity = 1; setTimeout(()=>toastEl.style.opacity=0, 2000); }
+        function hexToRgb(hex) { const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16); return {r,g,b}; }
+        
+        const GraphEditor = {
+            targetLayer: null, 
+            targetProp: null, 
+            points: [], activePoint: -1, isDragging: false,
+            minValLabel: 0, maxValLabel: 1,
+            
+            open: (layer, prop, minVal=0, maxVal=1) => {
+                GraphEditor.targetLayer = layer;
+                GraphEditor.targetProp = prop;
+                GraphEditor.minValLabel = minVal;
+                GraphEditor.maxValLabel = maxVal;
+
+                document.getElementById('graph-min-val').innerText = minVal;
+                document.getElementById('graph-max-val').innerText = maxVal;
+                document.getElementById('graph-mid-val').style.display = (minVal === -1) ? 'block' : 'none'; 
+                
+                let cfg;
+                if(prop === 'opacity') {
+                    if(!layer.config.opacityGraph) layer.config.opacityGraph = { active:false, nodes:[{x:0,y:1,type:'linear'},{x:1,y:0,type:'linear'}], linkToLife:true, loop:false, duration:1 };
+                    cfg = layer.config.opacityGraph;
+                    document.getElementById('graph-title').innerText = "Gráfica Opacidad";
+                    document.getElementById('lbl-link').style.display = 'flex';
+                } else if(prop === 'emissionRate') {
+                    if(!layer.config.rateGraph) layer.config.rateGraph = { active:false, nodes:[{x:0,y:1,type:'linear'},{x:1,y:1,type:'linear'}], linkToLife:false, loop:true, duration:2 };
+                    cfg = layer.config.rateGraph;
+                    document.getElementById('graph-title').innerText = "Gráfica Tasa Emisión";
+                    document.getElementById('lbl-link').style.display = 'none'; 
+                } else if(prop === 'color') {
+                    if(!layer.config.colorGraph) layer.config.colorGraph = { active:false, nodes:[{x:0,y:0,type:'linear',color:'#ffffff'},{x:1,y:0,type:'linear',color:'#ffffff'}], linkToLife:true, loop:false, duration:1 };
+                    cfg = layer.config.colorGraph;
+                    document.getElementById('graph-title').innerText = "Gráfica Color & Intensidad";
+                    document.getElementById('lbl-link').style.display = 'flex';
+                }
+
+                GraphEditor.points = cfg.nodes;
+                document.getElementById('chk-link').checked = cfg.linkToLife;
+                document.getElementById('chk-loop').checked = cfg.loop;
+                document.getElementById('inp-duration').value = cfg.duration;
+                document.getElementById('inp-duration').disabled = (prop==='opacity' || prop==='color') ? cfg.linkToLife : false;
+                document.getElementById('box-color-picker').style.display = (prop === 'color') ? 'flex' : 'none';
+
+                GraphEditor.updatePowerBtn();
+                GraphEditor.activePoint = -1;
+                document.getElementById('inp-point-y').value = '';
+                document.getElementById('inp-point-y').disabled = true;
+
+                document.getElementById('graph-window').style.display = 'flex';
+                GraphEditor.draw();
+            },
+            
+            togglePower: () => {
+                if(GraphEditor.targetLayer) {
+                    let cfg;
+                    if(GraphEditor.targetProp==='opacity') cfg = GraphEditor.targetLayer.config.opacityGraph;
+                    else if(GraphEditor.targetProp==='emissionRate') cfg = GraphEditor.targetLayer.config.rateGraph;
+                    else if(GraphEditor.targetProp==='color') cfg = GraphEditor.targetLayer.config.colorGraph;
+                    cfg.active = !cfg.active;
+                    GraphEditor.updatePowerBtn();
+                    renderUI(); 
+                }
+            },
+
+            updatePowerBtn: () => {
+                const btn = document.getElementById('graph-power');
+                let cfg;
+                if(GraphEditor.targetProp==='opacity') cfg = GraphEditor.targetLayer?.config.opacityGraph;
+                else if(GraphEditor.targetProp==='emissionRate') cfg = GraphEditor.targetLayer?.config.rateGraph;
+                else if(GraphEditor.targetProp==='color') cfg = GraphEditor.targetLayer?.config.colorGraph;
+                const isActive = cfg ? cfg.active : false;
+                btn.className = isActive ? 'btn-power active' : 'btn-power';
+            },
+
+            updateConfig: () => {
+                let c;
+                if(GraphEditor.targetProp==='opacity') c = GraphEditor.targetLayer.config.opacityGraph;
+                else if(GraphEditor.targetProp==='emissionRate') c = GraphEditor.targetLayer.config.rateGraph;
+                else if(GraphEditor.targetProp==='color') c = GraphEditor.targetLayer.config.colorGraph;
+
+                if(GraphEditor.targetProp!=='emissionRate') c.linkToLife = document.getElementById('chk-link').checked;
+                c.loop = document.getElementById('chk-loop').checked;
+                c.duration = parseFloat(document.getElementById('inp-duration').value);
+                if(GraphEditor.targetProp!=='emissionRate') document.getElementById('inp-duration').disabled = c.linkToLife;
+            },
+
+            updatePointValue: () => {
+                if(GraphEditor.activePoint !== -1) {
+                    let v = parseFloat(document.getElementById('inp-point-y').value);
+                    if(isNaN(v)) v=0;
+                    if(GraphEditor.minValLabel === -1) v = Math.max(-1, Math.min(1, v));
+                    else v = Math.max(0, Math.min(1, v));
+                    GraphEditor.points[GraphEditor.activePoint].y = v;
+                    GraphEditor.draw();
+                }
+            },
+            
+            updatePointColor: () => {
+                if(GraphEditor.activePoint !== -1 && GraphEditor.targetProp === 'color') {
+                    GraphEditor.points[GraphEditor.activePoint].color = document.getElementById('graph-color-picker').value;
+                    GraphEditor.draw();
+                }
+            },
+
+            draw: () => {
+                const cv = document.getElementById('graph-canvas'); const cx = cv.getContext('2d');
+                const w = cv.width, h = cv.height;
+                cx.clearRect(0,0,w,h);
+                
+                if(GraphEditor.targetProp === 'color' && GraphEditor.points.length >= 2) {
+                    const sorted = [...GraphEditor.points].sort((a,b)=>a.x - b.x);
+                    const grad = cx.createLinearGradient(0, 0, w, 0);
+                    sorted.forEach(p => grad.addColorStop(Math.max(0, Math.min(1, p.x)), p.color));
+                    cx.fillStyle = grad; cx.globalAlpha = 0.2; cx.fillRect(0,0,w,h); cx.globalAlpha = 1.0;
+                }
+
+                cx.strokeStyle='#333'; cx.lineWidth=1; cx.beginPath();
+                for(let i=0; i<=10; i++) { cx.moveTo(i*w/10, 0); cx.lineTo(i*w/10, h); cx.moveTo(0, i*h/10); cx.lineTo(w, i*h/10); } cx.stroke();
+                
+                if(GraphEditor.minValLabel === -1) {
+                    cx.strokeStyle='#555'; cx.beginPath(); cx.moveTo(0, h/2); cx.lineTo(w, h/2); cx.stroke();
+                }
+
+                GraphEditor.points.sort((a,b)=>a.x - b.x);
+                const mapY = (yVal) => {
+                    if(GraphEditor.minValLabel === -1) return (1 - (yVal + 1) / 2) * h;
+                    else return (1 - yVal) * h;
+                };
+
+                let cfg;
+                if(GraphEditor.targetProp==='opacity') cfg = GraphEditor.targetLayer?.config.opacityGraph;
+                else if(GraphEditor.targetProp==='emissionRate') cfg = GraphEditor.targetLayer?.config.rateGraph;
+                else if(GraphEditor.targetProp==='color') cfg = GraphEditor.targetLayer?.config.colorGraph;
+
+                cx.strokeStyle = (cfg && cfg.active) ? '#00e676' : '#555'; 
+                cx.lineWidth=2; cx.beginPath();
+                if(GraphEditor.points.length > 0) {
+                    cx.moveTo(GraphEditor.points[0].x * w, mapY(GraphEditor.points[0].y));
+                    for(let i=0; i<GraphEditor.points.length-1; i++) {
+                        const p1 = GraphEditor.points[i], p2 = GraphEditor.points[i+1];
+                        if (p1.type === 'linear') cx.lineTo(p2.x * w, mapY(p2.y));
+                        else {
+                            for(let j=1; j<=20; j++) {
+                                const t = j/20, mu2 = (1 - Math.cos(t * Math.PI)) / 2;
+                                const iy = p1.y * (1 - mu2) + p2.y * mu2;
+                                const ix = p1.x + (p2.x - p1.x) * t;
+                                cx.lineTo(ix*w, mapY(iy));
+                            }
+                        }
+                    }
+                }
+                cx.stroke();
+
+                GraphEditor.points.forEach((p, i) => {
+                    const px = p.x * w, py = mapY(p.y);
+                    if(GraphEditor.targetProp === 'color') {
+                        cx.fillStyle = p.color; cx.beginPath(); cx.arc(px, py, 8, 0, Math.PI*2); cx.fill(); cx.stroke();
+                    }
+                    cx.fillStyle = (i === GraphEditor.activePoint) ? '#fff' : (p.type==='smooth'?'#00bcd4':'#ffd700');
+                    cx.beginPath(); cx.arc(px, py, 5, 0, Math.PI*2); cx.fill();
+                });
+
+                if(cfg && cfg.active && !cfg.linkToLife) {
+                    const dur = cfg.duration || 1;
+                    const t = cfg.loop ? (globalTime % dur) : Math.min(globalTime, dur);
+                    const xPos = (t / dur) * w;
+                    cx.strokeStyle = '#ff3d00'; cx.lineWidth = 1; cx.beginPath(); cx.moveTo(xPos, 0); cx.lineTo(xPos, h); cx.stroke();
+                    requestAnimationFrame(GraphEditor.draw);
+                }
+            }
+        };
+
+        const gc = document.getElementById('graph-canvas');
+        gc.addEventListener('mousedown', e => {
+            const r = gc.getBoundingClientRect(), mx = (e.clientX - r.left)/r.width, my = (e.clientY - r.top)/r.height;
+            const mapClickY = (clickY) => {
+                if(GraphEditor.minValLabel === -1) return (1 - clickY) * 2 - 1; 
+                else return 1 - clickY;
+            };
+            const mapY = (yVal) => {
+                if(GraphEditor.minValLabel === -1) return (1 - (yVal + 1) / 2);
+                else return (1 - yVal);
+            };
+
+            let found = -1; 
+            GraphEditor.points.forEach((p, i) => { 
+                const py = mapY(p.y);
+                if(Math.hypot(p.x - mx, py - my) < 0.05) found = i; 
+            });
+
+            if(e.button === 2 && found !== -1) { 
+                GraphEditor.points[found].type = GraphEditor.points[found].type === 'linear' ? 'smooth' : 'linear'; 
+                GraphEditor.draw(); 
+            }
+            else if (found !== -1) { 
+                GraphEditor.activePoint = found; GraphEditor.isDragging = true; 
+                document.getElementById('inp-point-y').value = GraphEditor.points[found].y.toFixed(2);
+                document.getElementById('inp-point-y').disabled = false;
+                if(GraphEditor.targetProp === 'color') {
+                    document.getElementById('graph-color-picker').value = GraphEditor.points[found].color || '#ffffff';
+                }
+                GraphEditor.draw(); 
+            }
+            else { 
+                GraphEditor.activePoint = -1; GraphEditor.draw(); 
+                document.getElementById('inp-point-y').value = '';
+                document.getElementById('inp-point-y').disabled = true;
+            }
+        });
+        
+        gc.addEventListener('mousemove', e => {
+            if(GraphEditor.isDragging && GraphEditor.activePoint !== -1) {
+                const r = gc.getBoundingClientRect(), mx = Math.max(0, Math.min(1, (e.clientX - r.left)/r.width));
+                const myRaw = Math.max(0, Math.min(1, (e.clientY - r.top)/r.height));
+                let valY;
+                if(GraphEditor.minValLabel === -1) valY = (1 - myRaw) * 2 - 1;
+                else valY = 1 - myRaw;
+                GraphEditor.points[GraphEditor.activePoint].x = mx; 
+                GraphEditor.points[GraphEditor.activePoint].y = valY; 
+                GraphEditor.draw();
+                document.getElementById('inp-point-y').value = valY.toFixed(2);
+            }
+        });
+        window.addEventListener('mouseup', () => GraphEditor.isDragging = false);
+        gc.addEventListener('dblclick', e => {
+            const r = gc.getBoundingClientRect(), mx = (e.clientX - r.left)/r.width, myRaw = (e.clientY - r.top)/r.height;
+            const mapY = (yVal) => { if(GraphEditor.minValLabel === -1) return (1 - (yVal + 1) / 2); else return (1 - yVal); };
+            let del = -1; 
+            GraphEditor.points.forEach((p, i) => { 
+                const py = mapY(p.y);
+                if(Math.hypot(p.x - mx, py - myRaw) < 0.05) del = i; 
+            });
+            if(del !== -1 && GraphEditor.points.length > 2) { 
+                GraphEditor.points.splice(del, 1); GraphEditor.activePoint = -1; 
+            }
+            else if (del === -1) {
+                let valY;
+                if(GraphEditor.minValLabel === -1) valY = (1 - myRaw) * 2 - 1;
+                else valY = 1 - myRaw;
+                const newP = {x: Math.max(0, Math.min(1, mx)), y: valY, type:'linear'};
+                if(GraphEditor.targetProp === 'color') newP.color = '#ffffff';
+                GraphEditor.points.push(newP);
+            }
+            GraphEditor.draw();
+        });
+
+        const dragEl = document.getElementById('graph-window'), headerEl = document.getElementById('graph-header');
+        let isDraggingWin = false, dragOffX=0, dragOffY=0;
+        headerEl.addEventListener('mousedown', e => { if(e.target.tagName!=='BUTTON' && e.target.id!=='graph-power'){ isDraggingWin=true; dragOffX = e.clientX - dragEl.offsetLeft; dragOffY = e.clientY - dragEl.offsetTop; } });
+        window.addEventListener('mousemove', e => { if(isDraggingWin) { dragEl.style.left = (e.clientX - dragOffX) + 'px'; dragEl.style.top = (e.clientY - dragOffY) + 'px'; }});
+        window.addEventListener('mouseup', () => isDraggingWin = false);
+
+        function evaluateGraph(points, t) {
+            if(!points.length) return 1; if(t<=points[0].x) return points[0].y; if(t>=points[points.length-1].x) return points[points.length-1].y;
+            for(let i=0; i<points.length-1; i++) {
+                if(t >= points[i].x && t <= points[i+1].x) {
+                    const localT = (t - points[i].x) / (points[i+1].x - points[i].x);
+                    if(points[i].type === 'smooth') { const mu2 = (1 - Math.cos(localT * Math.PI)) / 2; return points[i].y * (1 - mu2) + points[i+1].y * mu2; }
+                    else return points[i].y + (points[i+1].y - points[i].y) * localT;
+                }
+            } return 1;
+        }
+
+        function evaluateColorGraph(points, t) {
+            if(!points.length) return {r:255,g:255,b:255, i:0};
+            const sPoints = [...points].sort((a,b)=>a.x-b.x);
+            if(t <= sPoints[0].x) { const c=hexToRgb(sPoints[0].color); return {r:c.r, g:c.g, b:c.b, i:sPoints[0].y}; }
+            if(t >= sPoints[sPoints.length-1].x) { const c=hexToRgb(sPoints[sPoints.length-1].color); return {r:c.r, g:c.g, b:c.b, i:sPoints[sPoints.length-1].y}; }
+            for(let i=0; i<sPoints.length-1; i++) {
+                if(t >= sPoints[i].x && t <= sPoints[i+1].x) {
+                    const localT = (t - sPoints[i].x) / (sPoints[i+1].x - sPoints[i].x);
+                    const c1 = hexToRgb(sPoints[i].color);
+                    const c2 = hexToRgb(sPoints[i+1].color);
+                    const i1 = sPoints[i].y;
+                    const i2 = sPoints[i+1].y;
+                    const r = c1.r + (c2.r - c1.r) * localT;
+                    const g = c1.g + (c2.g - c1.g) * localT;
+                    const b = c1.b + (c2.b - c1.b) * localT;
+                    let yVal;
+                    if(sPoints[i].type === 'smooth') { const mu2 = (1 - Math.cos(localT * Math.PI)) / 2; yVal = i1 * (1 - mu2) + i2 * mu2; }
+                    else yVal = i1 + (i2 - i1) * localT;
+                    return {r, g, b, i: yVal};
+                }
+            }
+            return {r:255,g:255,b:255, i:0};
+        }
+
+        const app = {
+            newPreset: () => { if(confirm("¿Nuevo?")) { layers=[]; particles=[]; currentPresetName=null; layers.push(new Layer("Fuego Base", 'generator')); updateTitle(); renderUI(); }},
+            savePreset: (asNew) => {
+                if(!currentPresetName || asNew) { const n=prompt("Nombre:"); if(!n) return; currentPresetName=n; }
+                const data = serializeLayers(); localStorage.setItem('preset_' + currentPresetName, JSON.stringify(data)); updateTitle(); showToast(`Guardado: ${currentPresetName}`);
+            },
+            loadPresetWindow: () => {
+                const ml = document.getElementById('modal-list'); ml.innerHTML = ''; 
+                Object.keys(localStorage).filter(k=>k.startsWith('preset_')).forEach(k => {
+                    const n = k.replace('preset_',''); 
+                    const d = document.createElement('div'); d.className='preset-item';
+                    const nameSpan = document.createElement('span'); nameSpan.innerText = n;
+                    const actionsDiv = document.createElement('div'); actionsDiv.className = 'preset-actions';
+                    const btnMerge = document.createElement('button'); btnMerge.className = 'btn btn-blue'; btnMerge.innerText = '➕ Mezclar';
+                    btnMerge.onclick = (e) => { e.stopPropagation(); app.mergePreset(k); };
+                    const btnLoad = document.createElement('button'); btnLoad.className = 'btn btn-copy'; btnLoad.innerText = '📂 Cargar';
+                    btnLoad.onclick = (e) => { e.stopPropagation(); app.loadFullPreset(k, n); };
+                    const btnDel = document.createElement('button'); btnDel.className = 'btn btn-copy'; btnDel.innerText = '🗑️';
+                    btnDel.onclick = (e) => { e.stopPropagation(); if(confirm(`Borrar ${n}?`)){localStorage.removeItem(k); app.loadPresetWindow();} };
+                    actionsDiv.append(btnMerge, btnLoad, btnDel);
+                    d.append(nameSpan, actionsDiv);
+                    ml.appendChild(d);
+                }); document.getElementById('modal-overlay').style.display='flex';
+            },
+            loadFullPreset: (key, name) => {
+                try { 
+                    const raw = JSON.parse(localStorage.getItem(key)); 
+                    restoreLayers(raw, false); 
+                    currentPresetName = name; 
+                    updateTitle(); 
+                    document.getElementById('modal-overlay').style.display='none'; 
+                    showToast(`Cargado: ${name}`);
+                } catch(e) { alert("Error al cargar"); console.error(e); }
+            },
+            mergePreset: (key) => {
+                try {
+                    const raw = JSON.parse(localStorage.getItem(key));
+                    restoreLayers(raw, true); 
+                    document.getElementById('modal-overlay').style.display='none';
+                    showToast("Capas fusionadas");
+                } catch(e) { alert("Error al mezclar"); console.error(e); }
+            },
+            exportJSON: () => {
+                const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ version: "18.2", name: currentPresetName, layers: serializeLayers() })], {type:'application/json'})); a.download = (currentPresetName || 'particles') + '.json'; a.click();
+            }
+        };
+
+        function updateTitle() { projectNameEl.innerText = currentPresetName ? `Proyecto: ${currentPresetName}` : "Sin Título"; }
+        function serializeLayers() { return layers.map(l => { const pData = (l.source.type === 'preset' && l.source.presetData) ? l.source.presetData : null; return { name:l.name, visible:l.visible, source:{ ...l.source, texture:null, presetData: pData }, config:l.config }; }); }
+        
+        function restoreLayers(d, isMerge) { 
+            if(!isMerge) { layers = []; particles = []; }
+            d.forEach(ld => { 
+                const l = new Layer(ld.name + (isMerge ? " (Mix)" : ""), ld.source.type); 
+                l.visible=ld.visible; 
+                l.config=ld.config; 
+                if(!l.config.emissionRate && l.config.frequency) l.config.emissionRate = 1000/l.config.frequency;
+                if(!l.config.emissionRate) l.config.emissionRate = 30;
+                if(!l.config.geometry) l.config.geometry={type:'point',ellipse:{rx:100,ry:100,rotation:0},line:{len:200,angle:90},sphere:{radius:100}}; 
+                if(!l.config.colorGraph) l.config.colorGraph = { active:false, nodes:[{x:0,y:0,type:'linear',color:'#ffffff'},{x:1,y:0,type:'linear',color:'#ffffff'}], linkToLife:true, loop:false, duration:1 };
+                l.source=ld.source; 
+                l.updateTexture(); 
+                layers.push(l); 
+            }); 
+            renderUI(); 
+        }
+
+        function moveLayer(arr, index, dir) {
+            if (dir === 1 && index < arr.length - 1) { [arr[index], arr[index+1]] = [arr[index+1], arr[index]]; renderUI(); } 
+            else if (dir === -1 && index > 0) { [arr[index], arr[index-1]] = [arr[index-1], arr[index]]; renderUI(); }
+        }
+
+        document.addEventListener('click', () => document.getElementById('ctx-menu').style.display = 'none');
+        window.openContextMenu = function(e, layerObj) {
+            e.preventDefault();
+            contextTarget = layerObj;
+            const menu = document.getElementById('ctx-menu');
+            menu.style.display = 'block';
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = e.clientY + 'px';
+        };
+        document.getElementById('ctx-rename').onclick = () => { 
+            if(contextTarget) { 
+                const n = prompt("Nuevo nombre:", contextTarget.name); 
+                if(n) { contextTarget.name = n; renderUI(); } 
+            } 
+        };
+
+        const Generators = {
+            glow: (c) => renderGen(64, x => { const g = x.createRadialGradient(32,32,2, 32,32,30); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,64,64); }),
+            hardCircle: (c) => renderGen(64, x => { x.fillStyle = c; x.beginPath(); x.arc(32,32,30,0,Math.PI*2); x.fill(); }),
+            smoke: (c) => renderGen(64, x => { const g = x.createRadialGradient(32,32,10, 32,32,32); g.addColorStop(0, hexToRgba(c, 0.8)); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,64,64); }),
+            ring: (c) => renderGen(64, x => { x.strokeStyle = c; x.lineWidth = 4; x.beginPath(); x.arc(32,32,25,0,Math.PI*2); x.stroke(); })
+        };
+        function renderGen(s, fn) { const c = document.createElement('canvas'); c.width = s; c.height = s; fn(c.getContext('2d')); const i = new Image(); i.src = c.toDataURL(); return i; }
+        function updateTextureForData(d) {
+            if (d.source.type === 'generator') d.source.texture = Generators[d.source.genType||'glow'](d.source.genColor||'#ffaa00');
+            else if (d.source.type === 'image' && d.source.imageSrc) { const i=new Image(); i.src=d.source.imageSrc; d.source.texture=i; }
+            else if (d.source.type === 'sequence' && d.source.sequenceSrcs?.length) { d.source.texture = d.source.sequenceSrcs.map(s=>{const i=new Image(); i.src=s; return i;}); d.source.frameCount=d.source.texture.length; }
+        }
+
+        class Layer {
+            constructor(name, type = 'generator') {
+                this.id = Math.random(); this.name = name; this.visible = true; this.spawnTimer = 0;
+                this.source = { type, genType:'glow', genColor:'#ffaa00', imageSrc:null, sequenceSrcs:[], presetName:null, presetData:null, texture:null };
+                this.config = {
+                    globalOpacity:1, emissionRate: 30, life:{min:0.5, max:1.5}, speed:{min:50, max:150},
+                    scale:{start:1, end:0}, alpha:{start:1, end:0}, rotation:{min:0, max:360}, gravity:{x:0, y:-50}, blendMode:'lighter', animSpeed:1,
+                    geometry: { type:'point', ellipse:{rx:100,ry:100,rotation:0,minAngle:0,maxAngle:360}, line:{len:200,angle:90}, sphere:{radius:100} },
+                    opacityGraph: { active:false, nodes:[{x:0,y:1,type:'linear'},{x:1,y:0,type:'linear'}], linkToLife:true, loop:false, duration:1 },
+                    rateGraph: { active:false, nodes:[{x:0,y:1,type:'linear'},{x:1,y:1,type:'linear'}], linkToLife:false, loop:true, duration:2 },
+                    colorGraph: { active:false, nodes:[{x:0,y:0,type:'linear',color:'#ffffff'},{x:1,y:0,type:'linear',color:'#ffffff'}], linkToLife:true, loop:false, duration:1 }
+                };
+                if (type === 'generator') this.updateTexture();
+            }
+            updateTexture() {
+                if (this.source.type === 'preset') {
+                    if (this.source.presetName && !this.source.presetData) {
+                        const raw = localStorage.getItem('preset_' + this.source.presetName); if(raw) this.source.presetData = JSON.parse(raw);
+                    }
+                } else updateTextureForData(this);
+            }
+        }
+
+        class MiniSystem {
+            constructor(d) { this.layers = []; this.particles = []; if(d) d.forEach(ld => { const l = new Layer(ld.name, ld.source.type); l.visible = ld.visible; l.config = JSON.parse(JSON.stringify(ld.config)); l.source = JSON.parse(JSON.stringify(ld.source)); l.updateTexture(); this.layers.push(l); }); }
+            update(dt) { this.layers.forEach(l => { if(!l.visible) return; l.spawnTimer += dt; const f = 1.0/l.config.emissionRate; while(l.spawnTimer >= f) { l.spawnTimer -= f; this.particles.push(new Particle(l,0,0)); } }); for (let i = this.particles.length-1; i>=0; i--) { const p=this.particles[i]; if(p.active) p.update(dt); else this.particles.splice(i,1); } }
+            draw(ctx, px, py, ps, pa) { ctx.save(); ctx.translate(px, py); ctx.scale(ps, ps); this.layers.forEach(l => { if(!l.visible) return; for(let p of this.particles){ if(p.layer===l && p.active) p.draw(ctx, true, pa); }}); ctx.restore(); }
+        }
+
+        class Particle {
+            constructor(layer, fx=null, fy=null) { this.layer = layer; this.miniSystem = (layer.source.type==='preset' && layer.source.presetData) ? new MiniSystem(layer.source.presetData) : null; this.reset(fx, fy); }
+            reset(fx, fy) {
+                const c = this.layer.config; this.active = true; this.age = 0; this.life = c.life.min + Math.random()*(c.life.max - c.life.min);
+                const ox = fx!==null ? fx : emitter.x; const oy = fy!==null ? fy : emitter.y;
+                let sx=ox, sy=oy, sz=0, ea=0, g=c.geometry;
+                
+                if (g.type === 'point') ea=(c.rotation.min+Math.random()*(c.rotation.max-c.rotation.min))*Math.PI/180; 
+                else if (g.type === 'ellipse') { const rot=g.ellipse.rotation*Math.PI/180, t=(g.ellipse.minAngle+Math.random()*(g.ellipse.maxAngle-g.ellipse.minAngle))*Math.PI/180; const lx=Math.cos(t)*g.ellipse.rx, ly=Math.sin(t)*g.ellipse.ry; sx=ox+lx*Math.cos(rot)-ly*Math.sin(rot); sy=oy+lx*Math.sin(rot)+ly*Math.cos(rot); ea=t+rot; } 
+                else if (g.type === 'line') { const rad=g.line.angle*Math.PI/180, t=(Math.random()-0.5)*g.line.len; sx=ox+Math.cos(rad)*t; sy=oy+Math.sin(rad)*t; ea=rad-Math.PI/2; }
+                else if (g.type === 'sphere') {
+                    const u = Math.random(); const v = Math.random();
+                    const theta = 2 * Math.PI * u;
+                    const phi = Math.acos(2 * v - 1);
+                    const r = g.sphere.radius;
+                    const lx = r * Math.sin(phi) * Math.cos(theta);
+                    const ly = r * Math.sin(phi) * Math.sin(theta);
+                    const lz = r * Math.cos(phi);
+                    sx = ox + lx; sy = oy + ly; sz = lz;
+                    ea = Math.atan2(ly, lx); 
+                }
+
+                this.x=sx; this.y=sy; this.z=sz;
+                const spd = c.speed.min + Math.random()*(c.speed.max-c.speed.min);
+                if(g.type==='sphere') {
+                    const dx=sx-ox, dy=sy-oy, dz=sz; const mag = Math.hypot(dx,dy,dz)||1;
+                    this.vx = (dx/mag)*spd; this.vy = (dy/mag)*spd; this.vz = (dz/mag)*spd;
+                } else {
+                    this.vx=Math.cos(ea)*spd; this.vy=Math.sin(ea)*spd; this.vz=0;
+                }
+                
+                this.scaleStart=c.scale.start; this.scaleEnd=c.scale.end; this.alphaStart=c.alpha.start; this.alphaEnd=c.alpha.end;
+                this.currS=this.scaleStart; this.currA=this.alphaStart;
+                this.color = {r:255, g:255, b:255}; 
+            }
+            update(dt) {
+                const c = this.layer.config; this.age+=dt; if(this.age>=this.life){this.active=false; return;}
+                this.vx += c.gravity.x*dt; this.vy += c.gravity.y*dt; 
+                this.x += this.vx*dt; this.y += this.vy*dt; this.z += (this.vz||0)*dt;
+
+                const t = this.age/this.life;
+                this.currS = this.scaleStart*(1-t) + this.scaleEnd*t;
+                
+                if(c.opacityGraph && c.opacityGraph.active && c.opacityGraph.nodes.length > 0) {
+                    let gt = this.age; const dur = c.opacityGraph.linkToLife ? this.life : c.opacityGraph.duration;
+                    if(c.opacityGraph.loop) gt = gt % dur; else if(gt>dur) gt = dur;
+                    this.currA = evaluateGraph(c.opacityGraph.nodes, gt/dur);
+                } else { this.currA = this.alphaStart*(1-t) + this.alphaEnd*t; }
+
+                if(c.colorGraph && c.colorGraph.active) {
+                     let gt = this.age; const dur = c.colorGraph.linkToLife ? this.life : c.colorGraph.duration;
+                     if(c.colorGraph.loop) gt = gt % dur; else if(gt>dur) gt = dur;
+                     const colData = evaluateColorGraph(c.colorGraph.nodes, gt/dur);
+                     
+                     const i = colData.i;
+                     let r = colData.r, g = colData.g, b = colData.b;
+
+                     if(i > 0) {
+                         r = r + (255 - r) * i;
+                         g = g + (255 - g) * i;
+                         b = b + (255 - b) * i;
+                     } else if (i < 0) {
+                         const f = 1 + i;
+                         r *= f; g *= f; b *= f;
+                     }
+                     this.color.r = Math.floor(r); this.color.g = Math.floor(g); this.color.b = Math.floor(b);
+                }
+
+                if(this.miniSystem) this.miniSystem.update(dt);
+            }
+            draw(ctx, isChild=false, parentAlpha=1.0) {
+                if(!this.layer.visible) return;
+                let finalAlpha = this.currA;
+                if (!this.layer.config.opacityGraph || !this.layer.config.opacityGraph.active) finalAlpha *= this.layer.config.globalOpacity;
+                finalAlpha *= parentAlpha;
+                finalAlpha = Math.max(0, Math.min(1, finalAlpha));
+                
+                let perspectiveScale = 1;
+                if (this.layer.config.geometry.type === 'sphere') { perspectiveScale = 1 + (this.z / 300); }
+
+                if(this.miniSystem) { this.miniSystem.draw(ctx, this.x, this.y, this.currS * perspectiveScale, finalAlpha); return; }
+                
+                let tex = this.layer.source.texture;
+                if(Array.isArray(tex)) { if(!tex.length)return; tex=tex[Math.floor(((this.age/this.life)*(this.layer.config.animSpeed||1))%1*tex.length)]||tex[0]; }
+                if(!tex || !tex.complete) return;
+                
+                const s = (tex.width*0.6)*this.currS*perspectiveScale; 
+                if(s <= 0) return;
+
+                const drawX = this.x-s/2;
+                const drawY = this.y-s/2;
+
+                ctx.save();
+                ctx.globalAlpha = finalAlpha; 
+                ctx.globalCompositeOperation = this.layer.config.blendMode;
+                
+                // COLOR TINTING FIX: USE HELPER CANVAS TO AVOID SQUARE ARTIFACTS
+                if(this.layer.config.colorGraph && this.layer.config.colorGraph.active) {
+                    // 1. Resize Helper if needed (max 128 for perf, usually enough for particles)
+                    const bufSize = Math.min(128, Math.ceil(s));
+                    if(bufSize > 0) {
+                        // 2. Draw texture to helper
+                        helperCtx.clearRect(0,0,bufSize,bufSize);
+                        helperCtx.globalCompositeOperation = 'source-over';
+                        helperCtx.drawImage(tex, 0, 0, bufSize, bufSize);
+                        
+                        // 3. Tint it using source-in (keeps alpha, changes color)
+                        helperCtx.globalCompositeOperation = 'source-in';
+                        helperCtx.fillStyle = `rgb(${this.color.r}, ${this.color.g}, ${this.color.b})`;
+                        helperCtx.fillRect(0, 0, bufSize, bufSize);
+
+                        // 4. Draw helper to main canvas
+                        ctx.drawImage(helperCanvas, 0, 0, bufSize, bufSize, drawX, drawY, s, s);
+                    }
+                } else {
+                    ctx.drawImage(tex, drawX, drawY, s, s);
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // --- UI BUILDER ---
+        function createHybridSlider(label, layerObj, path, min, max, step, isLog = false, showLive = false, graphProp = null) {
+            const div = document.createElement('div'); div.className = 'control';
+            div.style.position='relative';
+            const lbl = document.createElement('label'); lbl.innerText = label;
+            const range = document.createElement('input'); range.type = 'range'; range.min = isLog?0:min; range.max = isLog?100:max; range.step = isLog?0.1:step;
+            const number = document.createElement('input'); number.type = 'number'; number.step = step;
+            
+            if (showLive && graphProp) {
+                const bar = document.createElement('div'); bar.className = 'live-bar';
+                div.appendChild(bar);
+                const updateLive = () => {
+                    if(!div.isConnected) return;
+                    const g = layerObj.config[graphProp];
+                    if(g && g.active && (!g.linkToLife || graphProp==='rateGraph')) {
+                        const dur = g.duration || 1;
+                        const t = globalTime % dur;
+                        const val = evaluateGraph(g.nodes, t/dur);
+                        bar.style.opacity = 1;
+                        bar.style.width = (val * 100) + 'px';
+                    } else { bar.style.opacity = 0; }
+                    requestAnimationFrame(updateLive);
+                };
+                requestAnimationFrame(updateLive);
+            }
+
+            const getVal = () => { let v=layerObj.config; if(Array.isArray(path)) path.forEach(k=>v=v[k]); else v=v[path]; return v; };
+            const setVal = (v) => { let r=layerObj.config; if(Array.isArray(path)) { for(let i=0; i<path.length-1; i++) r=r[path[i]]; r[path[path.length-1]] = v; } else layerObj.config[path] = v; };
+            const val = getVal();
+            range.value = isLog ? (val <= 30 ? (val-1)/29*50 : 50+((val-30)/170*50)) : val;
+            number.value = Math.round(val*100)/100;
+            range.oninput = (e) => { let v = parseFloat(e.target.value); if (isLog) v = v<=50 ? 1+(v/50)*29 : 30+((v-50)/50)*170; setVal(v); number.value = Math.round(v*100)/100; };
+            number.onchange = (e) => { let v = parseFloat(e.target.value); setVal(v); if (isLog) range.value = Math.max(0, Math.min(100, v<=30 ? (v-1)/29*50 : 50+((v-30)/170*50))); else range.value = v; };
+            div.append(lbl, range, number); return div;
+        }
+
+        function buildLayerControls(container, layerObj, isSub) {
+            const controls = document.createElement('div'); controls.className='layer-controls';
+            if(isSub) controls.style.padding='5px';
+
+            if (isSub) {
+                const r = document.createElement('div'); r.className='control-row';
+                r.innerHTML = `<label style="font-size:10px; flex:0">Tipo:</label>`;
+                const s = document.createElement('select'); 
+                ['generator','image','sequence'].forEach(t=>{ s.innerHTML+=`<option value="${t}" ${layerObj.source.type===t?'selected':''}>${t}</option>`; });
+                s.onchange=e=>{ layerObj.source.type=e.target.value; updateTextureForData(layerObj); renderUI(); };
+                r.appendChild(s); controls.appendChild(r);
+            }
+            if(layerObj.source.type==='generator') {
+                const r = document.createElement('div'); r.className='control-row';
+                const s = document.createElement('select'); Object.keys(Generators).forEach(k=>{ s.innerHTML+=`<option value="${k}" ${layerObj.source.genType===k?'selected':''}>${k.toUpperCase()}</option>`; });
+                s.onchange=e=>{ layerObj.source.genType=e.target.value; updateTextureForData(layerObj); };
+                const c = document.createElement('input'); c.type='color'; c.value=layerObj.source.genColor; c.style.flex='0 30px';
+                c.oninput=e=>{ layerObj.source.genColor=e.target.value; updateTextureForData(layerObj); };
+                r.append(s, c); controls.appendChild(r);
+            } else if (layerObj.source.type==='image') {
+                const r = document.createElement('div'); r.className='control-row';
+                const b = document.createElement('button'); b.className='btn btn-upload'; b.innerText='Cargar Imagen';
+                b.onclick=()=>{ window.targetLayerForImage=layerObj; document.getElementById('hidden-file-input').click(); };
+                r.appendChild(b); controls.appendChild(r);
+            }
+
+            const gg = document.createElement('div'); gg.className='control-group';
+            const gs = document.createElement('select'); gs.style.marginBottom='5px';
+            ['point','ellipse','line','sphere'].forEach(t=>{ gs.innerHTML+=`<option value="${t}" ${layerObj.config.geometry.type===t?'selected':''}>Geom: ${t.toUpperCase()}</option>`; });
+            gs.onchange=e=>{ layerObj.config.geometry.type=e.target.value; renderUI(); };
+            gg.appendChild(gs);
+            const g = layerObj.config.geometry;
+            if(g.type==='ellipse') { gg.append(createHybridSlider('Rad X', layerObj, ['geometry','ellipse','rx'], 1, 500, 1), createHybridSlider('Rad Y', layerObj, ['geometry','ellipse','ry'], 1, 500, 1), createHybridSlider('Rot', layerObj, ['geometry','ellipse','rotation'], 0, 360, 1), createHybridSlider('Arco Ini', layerObj, ['geometry','ellipse','minAngle'], 0, 360, 1), createHybridSlider('Arco Fin', layerObj, ['geometry','ellipse','maxAngle'], 0, 360, 1)); }
+            else if(g.type==='line') { gg.append(createHybridSlider('Len', layerObj, ['geometry','line','len'], 10, 500, 1), createHybridSlider('Ang', layerObj, ['geometry','line','angle'], 0, 360, 1)); }
+            else if(g.type==='sphere') { gg.append(createHybridSlider('Radio', layerObj, ['geometry','sphere','radius'], 10, 500, 1)); }
+            controls.appendChild(gg);
+
+            const gf = document.createElement('div'); gf.className='control-group';
+            const gfh = document.createElement('div'); gfh.style.display='flex'; gfh.style.alignItems='center'; gfh.innerHTML='<span class="group-label" style="margin:0">Emisión</span>';
+            const bgf = document.createElement('button'); bgf.className='btn btn-graph'; bgf.innerText='📈';
+            bgf.onclick=()=>GraphEditor.open(layerObj, 'emissionRate', 0, 500); gfh.appendChild(bgf); gf.appendChild(gfh);
+            
+            const rateSlider = createHybridSlider('Tasa (p/s)', layerObj, 'emissionRate', 1, 500, 1, false, true, 'rateGraph');
+            if(layerObj.config.rateGraph && layerObj.config.rateGraph.active) rateSlider.classList.add('disabled-control');
+            gf.appendChild(rateSlider);
+            controls.appendChild(gf);
+
+            const gp = document.createElement('div'); gp.className='control-group'; gp.innerHTML='<span class="group-label">Física</span>';
+            gp.append(createHybridSlider('Vida', layerObj, ['life','max'], 0.1, 5, 0.1), createHybridSlider('Vel', layerObj, ['speed','max'], 0, 800, 1), createHybridSlider('Grav Y', layerObj, ['gravity','y'], -500, 500, 1));
+            controls.appendChild(gp);
+
+            const gl = document.createElement('div'); gl.className='control-group'; 
+            const glh = document.createElement('div'); glh.style.display='flex'; glh.style.alignItems='center'; glh.innerHTML='<span class="group-label" style="margin:0">Apariencia</span>';
+            const bgo = document.createElement('button'); bgo.className='btn btn-graph'; bgo.innerText='📈';
+            bgo.onclick=()=>GraphEditor.open(layerObj, 'opacity', 0, 1); glh.appendChild(bgo);
+            
+            const bgc = document.createElement('button'); bgc.className='btn btn-graph'; bgc.innerText='🎨'; bgc.style.marginLeft='5px';
+            bgc.onclick=()=>GraphEditor.open(layerObj, 'color', -1, 1); glh.appendChild(bgc);
+            
+            gl.appendChild(glh);
+
+            const opSlider = createHybridSlider('Opacidad', layerObj, 'globalOpacity', 0, 1, 0.01, false, true, 'opacityGraph');
+            const a1 = createHybridSlider('Alf Ini', layerObj, ['alpha','start'], 0, 1, 0.01);
+            const a2 = createHybridSlider('Alf Fin', layerObj, ['alpha','end'], 0, 1, 0.01);
+            if(layerObj.config.opacityGraph && layerObj.config.opacityGraph.active) {
+                opSlider.classList.add('disabled-control'); a1.classList.add('disabled-control'); a2.classList.add('disabled-control');
+            }
+            gl.append(opSlider, createHybridSlider('Scl Ini', layerObj, ['scale','start'], 0, 5, 0.1), createHybridSlider('Scl Fin', layerObj, ['scale','end'], 0, 5, 0.1), a1, a2);
+
+            const rb = document.createElement('div'); rb.className='control-row';
+            const sb = document.createElement('select'); ['lighter','source-over','screen','multiply'].forEach(m=>{ sb.innerHTML+=`<option value="${m}" ${layerObj.config.blendMode===m?'selected':''}>${m}</option>`; });
+            sb.onchange=e=>layerObj.config.blendMode=e.target.value;
+            rb.appendChild(sb); gl.appendChild(rb);
+            controls.appendChild(gl);
+
+            container.appendChild(controls);
+        }
+
+        function renderUI() {
+            const os={}; document.querySelectorAll('details').forEach(d=>os[d.id]=d.open); layersList.innerHTML = '';
+            [...layers].reverse().forEach((layer, revIndex) => {
+                const realIndex = layers.length - 1 - revIndex;
+                const container = document.createElement('details'); container.className='layer-container'; container.id=`l-${layer.id}`;
+                if(os[container.id] || layers.length===1) container.open=true;
+                
+                const summary = document.createElement('summary');
+                const leftDiv = document.createElement('div'); leftDiv.className = 'layer-left';
+                
+                const nameLabel = document.createElement('b'); 
+                nameLabel.className = 'layer-name';
+                nameLabel.innerText = layer.name;
+                nameLabel.oncontextmenu = (e) => { openContextMenu(e, layer); };
+
+                leftDiv.innerHTML = `<span class="icon-btn" onclick="event.preventDefault(); layers[${realIndex}].visible=!layers[${realIndex}].visible; renderUI()">${layer.visible?'👁️':'🚫'}</span>`;
+                leftDiv.appendChild(nameLabel);
+                
+                const rightDiv = document.createElement('div'); rightDiv.className = 'layer-right';
+                if(realIndex < layers.length - 1) {
+                    const upBtn = document.createElement('span'); upBtn.className = 'icon-btn'; upBtn.innerText = '⬆️';
+                    upBtn.onclick = (e) => { e.preventDefault(); moveLayer(layers, realIndex, 1); }; rightDiv.appendChild(upBtn);
+                }
+                if(realIndex > 0) {
+                    const downBtn = document.createElement('span'); downBtn.className = 'icon-btn'; downBtn.innerText = '⬇️';
+                    downBtn.onclick = (e) => { e.preventDefault(); moveLayer(layers, realIndex, -1); }; rightDiv.appendChild(downBtn);
+                }
+                const delBtn = document.createElement('span'); delBtn.className = 'icon-btn'; delBtn.innerText = '🗑️';
+                delBtn.onclick = (e) => { e.preventDefault(); if(confirm('¿?')){layers.splice(realIndex,1); renderUI()} };
+                rightDiv.appendChild(delBtn);
+
+                summary.appendChild(leftDiv); summary.appendChild(rightDiv); container.appendChild(summary);
+                
+                const content = document.createElement('div'); content.className='layer-controls';
+                const tr = document.createElement('div'); tr.className='control-row';
+                const ts = document.createElement('select'); ['generator','image','sequence','preset'].forEach(t=>{ ts.innerHTML+=`<option value="${t}" ${layer.source.type===t?'selected':''}>${t.toUpperCase()}</option>`; });
+                ts.onchange=e=>{layer.source.type=e.target.value; layer.updateTexture(); renderUI();};
+                tr.appendChild(ts); content.appendChild(tr);
+
+                if(layer.source.type === 'preset') {
+                    const ps = document.createElement('select'); ps.style.width='100%'; ps.style.marginBottom='10px';
+                    const keys = Object.keys(localStorage).filter(k=>k.startsWith('preset_'));
+                    ps.innerHTML = '<option>-- Cargar Preset --</option>'; keys.forEach(k=>{ ps.innerHTML+=`<option value="${k.replace('preset_','')}" ${layer.source.presetName===k.replace('preset_','')?'selected':''}>${k.replace('preset_','')}</option>`; });
+                    ps.onchange=e=>{ layer.source.presetName=e.target.value; layer.source.presetData=null; layer.updateTexture(); renderUI(); };
+                    content.appendChild(ps);
+                    if(layer.source.presetData) {
+                        const box = document.createElement('div'); box.style.cssText="border:1px solid #7b1fa2; background:#222; padding:5px; margin-bottom:10px;";
+                        const h = document.createElement('div'); h.innerHTML=`<b>EDITOR LOCAL</b> <button class="btn btn-copy" onclick="const n=prompt('Nombre:'); if(n){localStorage.setItem('preset_'+n, JSON.stringify(layers[${realIndex}].source.presetData)); showToast('Guardado');}">Guardar como Nuevo</button>`;
+                        h.style.cssText="background:#4a148c; padding:5px; display:flex; justify-content:space-between; font-size:11px;"; box.appendChild(h);
+                        layer.source.presetData.forEach((sub, idx) => {
+                            const sd = document.createElement('details'); sd.className='sub-layer-container';
+                            const ss = document.createElement('summary');
+                            
+                            const sl = document.createElement('div'); sl.style.display='flex'; sl.style.alignItems='center'; 
+                            
+                            const subName = document.createElement('b'); subName.innerText = sub.name;
+                            subName.oncontextmenu = (e) => { openContextMenu(e, sub); };
+                            sl.appendChild(subName);
+
+                            const sr = document.createElement('div'); sr.style.display='flex'; sr.style.gap='5px';
+                            if(idx < layer.source.presetData.length - 1) {
+                                const su = document.createElement('span'); su.className='icon-btn'; su.innerText='⬆️';
+                                su.onclick = (e) => { e.preventDefault(); moveLayer(layer.source.presetData, idx, 1); }; sr.appendChild(su);
+                            }
+                            if(idx > 0) {
+                                const sdwn = document.createElement('span'); sdwn.className='icon-btn'; sdwn.innerText='⬇️';
+                                sdwn.onclick = (e) => { e.preventDefault(); moveLayer(layer.source.presetData, idx, -1); }; sr.appendChild(sdwn);
+                            }
+                            const sdel = document.createElement('span'); sdel.className='icon-btn'; sdel.innerText='🗑️';
+                            sdel.onclick = (e) => { e.preventDefault(); layer.source.presetData.splice(idx,1); renderUI(); }; sr.appendChild(sdel);
+                            
+                            ss.appendChild(sl); ss.appendChild(sr); sd.appendChild(ss); 
+                            buildLayerControls(sd, sub, true); box.appendChild(sd);
+                        });
+                        const ab = document.createElement('button'); ab.className='btn btn-purple'; ab.innerText='➕ Sub-Capa';
+                        ab.onclick=()=>{ const t=new Layer("Sub"); layer.source.presetData.push({name:t.name,visible:true,source:t.source,config:t.config}); renderUI(); };
+                        box.appendChild(ab); content.appendChild(box);
+                    }
+                }
+                if(layer.source.type!=='preset') buildLayerControls(content, layer, false);
+                else { content.appendChild(document.createElement('hr')); buildLayerControls(content, layer, false); }
+                container.appendChild(content); layersList.appendChild(container);
+            });
+        }
+
+        document.getElementById('add-layer-btn').onclick = () => { layers.push(new Layer(`Capa ${layers.length + 1}`)); renderUI(); };
+        document.getElementById('hidden-json-input').onchange = (e) => { const r = new FileReader(); r.onload = (evt) => { try { const d = JSON.parse(evt.target.result); if(d.name) currentPresetName = d.name; restoreLayers(d.layers, false); updateTitle(); } catch(err) { alert("Error JSON"); } }; r.readAsText(e.target.files[0]); this.value=''; };
+        document.getElementById('hidden-file-input').addEventListener('change', function(e) { if (this.files[0]) { const r = new FileReader(); r.onload = (evt) => { if (window.targetLayerForImage) { window.targetLayerForImage.source.imageSrc = evt.target.result; window.targetLayerForImage.source.type = 'image'; updateTextureForData(window.targetLayerForImage); window.targetLayerForImage = null; renderUI(); } }; r.readAsDataURL(this.files[0]); } this.value = ''; });
+        window.addEventListener('resize', ()=>{ width=window.innerWidth; height=window.innerHeight; canvas.width=width; canvas.height=height; });
+        window.dispatchEvent(new Event('resize'));
+
+        function loop(t) {
+            const dt = Math.min((t - lastTime) / 1000, 0.1); lastTime = t; globalTime += dt;
+            layers.forEach(l => { 
+                if(!l.visible) return; 
+                l.spawnTimer += dt; 
+                let rate = l.config.emissionRate;
+                if(l.config.rateGraph && l.config.rateGraph.active) {
+                    const dur = l.config.rateGraph.duration || 1;
+                    const t = l.config.rateGraph.loop ? (globalTime % dur) : Math.min(globalTime, dur);
+                    const val = evaluateGraph(l.config.rateGraph.nodes, t/dur);
+                    rate = rate * val;
+                }
+                if(rate > 0.1) {
+                    const interval = 1.0 / rate; 
+                    while(l.spawnTimer >= interval) { l.spawnTimer -= interval; particles.push(new Particle(l)); } 
+                } else { l.spawnTimer = 0; }
+            });
+            
+            particles.sort((a,b) => a.z - b.z);
+
+            ctx.clearRect(0, 0, width, height);
+            layers.forEach(l => { 
+                if(!l.visible) return; 
+                const layerParticles = particles.filter(p => p.layer === l && p.active);
+                layerParticles.sort((a,b) => a.z - b.z);
+                layerParticles.forEach(p => p.draw(ctx)); 
+            });
+
+            for (let i = particles.length - 1; i >= 0; i--) { const p=particles[i]; if(p.active) p.update(dt); else particles.splice(i,1); }
+            
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('mousedown', e => { if(e.button===2 && e.target===canvas){ } if(e.target===canvas && e.button===0) emitter.isDragging=true; });
+        window.addEventListener('mouseup', () => { emitter.isDragging=false; });
+        window.addEventListener('mousemove', e => { if(emitter.isDragging) { emitter.x=e.clientX; emitter.y=e.clientY; marker.style.left=emitter.x+'px'; marker.style.top=emitter.y+'px'; } });
+
+        layers.push(new Layer("Fuego Base", 'generator')); renderUI(); requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
