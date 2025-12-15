@@ -6,16 +6,23 @@
     <title>Galería de Partículas PixiJS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <style>
-        body { 
+        html, body { 
+            width: 100%;
+            height: 100%;
             margin: 0; 
+            padding: 0;
             background: #111; 
-            overflow: hidden; 
+            overflow: hidden; /* Evita scrollbars */
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: white; 
             touch-action: none;
         }
         
-        canvas { display: block; }
+        canvas { 
+            display: block; 
+            width: 100%;
+            height: 100%;
+        }
 
         #ui-container {
             position: absolute;
@@ -93,13 +100,12 @@
             justify-content: center;
             cursor: pointer;
             transition: background 0.2s;
-            flex-shrink: 0; /* Evita que se aplasten */
+            flex-shrink: 0;
         }
 
         .nav-btn:active { background: #c2185b; transform: scale(0.95); }
         .nav-btn:disabled { background: #444; color: #777; }
         
-        /* Estilo especial para el botón de centrar */
         #btn-center {
             background: #444;
             color: #ddd;
@@ -131,15 +137,12 @@
         </div>
         <div class="controls-row">
             <button class="nav-btn" id="btn-center" title="Recentrar Emisor">🎯</button>
-            
             <button class="nav-btn" id="btn-prev">❮</button>
-            
             <div class="select-wrapper">
                 <select id="json-select">
                     <option value="" disabled selected>Selecciona efecto...</option>
                 </select>
             </div>
-
             <button class="nav-btn" id="btn-next">❯</button>
         </div>
     </div>
@@ -165,6 +168,7 @@
                 this.layers = [];
                 this.particles = [];
                 this.globalTime = 0;
+                // Inicializar en el centro exacto de la ventana actual
                 this.emitter = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
                 
                 this.Generators = {
@@ -534,6 +538,9 @@
                 if (activeRuntime) activeRuntime.destroy();
                 activeRuntime = new PixiParticleRuntime(app.stage, jsonData);
                 
+                // Aseguramos centrado inmediato al cargar
+                forceResize();
+
                 currentIndex = index;
                 uiSelect.value = index;
                 lblTitle.innerText = jsonData.name || target.name;
@@ -570,11 +577,20 @@
             }
         });
 
-        window.addEventListener('resize', () => {
-            app.renderer.resize(window.innerWidth, window.innerHeight);
+        // Lógica de redimensionamiento centralizada
+        function forceResize() {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            app.renderer.resize(w, h);
             if(activeRuntime) {
-                activeRuntime.setEmitterPos(window.innerWidth/2, window.innerHeight/2);
+                activeRuntime.setEmitterPos(w / 2, h / 2);
             }
+        }
+
+        window.addEventListener('resize', forceResize);
+        window.addEventListener('orientationchange', () => {
+            // Breve retraso para asegurar que el navegador actualizó las dimensiones
+            setTimeout(forceResize, 100);
         });
 
         app.ticker.add((delta) => {
