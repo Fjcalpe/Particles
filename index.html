@@ -93,10 +93,21 @@
             justify-content: center;
             cursor: pointer;
             transition: background 0.2s;
+            flex-shrink: 0; /* Evita que se aplasten */
         }
 
         .nav-btn:active { background: #c2185b; transform: scale(0.95); }
         .nav-btn:disabled { background: #444; color: #777; }
+        
+        /* Estilo especial para el botón de centrar */
+        #btn-center {
+            background: #444;
+            color: #ddd;
+        }
+        #btn-center:active {
+            background: #666;
+            color: #fff;
+        }
 
         #loading {
             position: absolute;
@@ -119,6 +130,8 @@
             <span class="counter" id="effect-counter">0 / 0</span>
         </div>
         <div class="controls-row">
+            <button class="nav-btn" id="btn-center" title="Recentrar Emisor">🎯</button>
+            
             <button class="nav-btn" id="btn-prev">❮</button>
             
             <div class="select-wrapper">
@@ -133,7 +146,7 @@
 
     <script>
         // ==========================================
-        //  LISTA DE ARCHIVOS ACTUALIZADA
+        //  LISTA DE ARCHIVOS
         // ==========================================
         const AVAILABLE_EXAMPLES = [
             { name: "Monedas", file: "monedas.json" },
@@ -491,6 +504,7 @@
         const uiSelect = document.getElementById('json-select');
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
+        const btnCenter = document.getElementById('btn-center');
         const lblTitle = document.getElementById('effect-title');
         const lblCounter = document.getElementById('effect-counter');
         const loadingIndicator = document.getElementById('loading');
@@ -547,6 +561,13 @@
         
         btnNext.addEventListener('click', () => {
             if (currentIndex < AVAILABLE_EXAMPLES.length - 1) loadExample(currentIndex + 1);
+        });
+
+        // Evento del botón de centrar
+        btnCenter.addEventListener('click', () => {
+            if (activeRuntime) {
+                activeRuntime.setEmitterPos(window.innerWidth / 2, window.innerHeight / 2);
+            }
         });
 
         window.addEventListener('resize', () => {
