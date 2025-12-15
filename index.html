@@ -2,30 +2,149 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Motor de Partículas PixiJS (Runtime)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Galería de Partículas PixiJS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: sans-serif; color: white; }
-        #ui { position: absolute; top: 10px; left: 10px; z-index: 100; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 8px; border: 1px solid #444; }
+        body { 
+            margin: 0; 
+            background: #111; 
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: white; 
+            touch-action: none;
+        }
+        
         canvas { display: block; }
-        button { cursor: pointer; padding: 8px 12px; background: #e91e63; color: white; border: none; border-radius: 4px; font-weight: bold; }
-        button:hover { background: #c2185b; }
+
+        #ui-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 100;
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        h3 { margin: 0; font-size: 16px; color: #fff; font-weight: 600; }
+        .counter { font-size: 12px; color: #888; }
+
+        .controls-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .select-wrapper {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            background: #333;
+            color: white;
+            border: 1px solid #444;
+            border-radius: 8px;
+            font-size: 16px;
+            appearance: none;
+            outline: none;
+        }
+        
+        .select-wrapper::after {
+            content: '▼';
+            font-size: 10px;
+            color: #aaa;
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .nav-btn {
+            background: #e91e63;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .nav-btn:active { background: #c2185b; transform: scale(0.95); }
+        .nav-btn:disabled { background: #444; color: #777; }
+
+        #loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            pointer-events: none;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <h3>Motor Runtime V1.0</h3>
-        <p>Carga el JSON exportado por tu editor:</p>
-        <input type="file" id="json-input" accept=".json" style="display:none">
-        <button onclick="document.getElementById('json-input').click()">📂 Cargar JSON</button>
-        <div id="status" style="margin-top:5px; font-size:12px; color:#aaa;">Esperando archivo...</div>
+    <div id="loading">Cargando efecto...</div>
+
+    <div id="ui-container">
+        <div class="header-row">
+            <h3 id="effect-title">Galería de Efectos</h3>
+            <span class="counter" id="effect-counter">0 / 0</span>
+        </div>
+        <div class="controls-row">
+            <button class="nav-btn" id="btn-prev">❮</button>
+            
+            <div class="select-wrapper">
+                <select id="json-select">
+                    <option value="" disabled selected>Selecciona efecto...</option>
+                </select>
+            </div>
+
+            <button class="nav-btn" id="btn-next">❯</button>
+        </div>
     </div>
 
     <script>
         // ==========================================
-        // CLASE DEL MOTOR (COPIAR ESTO A TU JUEGO)
+        //  LISTA DE ARCHIVOS ACTUALIZADA
+        // ==========================================
+        const AVAILABLE_EXAMPLES = [
+            { name: "Monedas", file: "monedas.json" },
+            { name: "1",       file: "1.json" },
+            { name: "2",       file: "2.json" },
+            { name: "3",       file: "3.json" },
+            { name: "4",       file: "4.json" }
+        ];
+
+        // ==========================================
+        //  CLASE DEL MOTOR (RUNTIME)
         // ==========================================
         class PixiParticleRuntime {
             constructor(parentContainer, jsonData) {
@@ -33,9 +152,8 @@
                 this.layers = [];
                 this.particles = [];
                 this.globalTime = 0;
-                this.emitter = { x: window.innerWidth / 2, y: window.innerHeight / 2 }; // Posición por defecto
+                this.emitter = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
                 
-                // Generadores de texturas procedurales (Idénticos al editor)
                 this.Generators = {
                     glow: (c) => this.renderGen(64, x => { const g = x.createRadialGradient(32,32,2, 32,32,30); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,64,64); }),
                     hardCircle: (c) => this.renderGen(64, x => { x.fillStyle = c; x.beginPath(); x.arc(32,32,30,0,Math.PI*2); x.fill(); }),
@@ -46,13 +164,11 @@
                 this.init(jsonData);
             }
 
-            // Mueve el emisor a donde quieras en tu juego
             setEmitterPos(x, y) {
                 this.emitter.x = x;
                 this.emitter.y = y;
             }
 
-            // Limpieza total
             destroy() {
                 this.layers.forEach(l => {
                     if (l.container) l.container.destroy({ children: true });
@@ -62,9 +178,7 @@
             }
 
             init(data) {
-                if (data.bg) document.body.style.background = data.bg; // Opcional: poner fondo
-                
-                // Ordenar capas (reverso porque el editor las guarda en orden de stack visual)
+                if (data.bg) document.body.style.background = data.bg;
                 const layerData = data.layers || data;
                 
                 layerData.forEach((ld, index) => {
@@ -75,20 +189,14 @@
                         visible: ld.visible !== false,
                         container: new PIXI.Container(),
                         spawnTimer: 0,
-                        texture: null // Se generará abajo
+                        texture: null
                     };
-
-                    // Configurar Z-Index
                     layer.container.zIndex = index;
-
-                    // Generar Textura
                     this.generateTextureForLayer(layer);
 
-                    // Setup específico para imágenes estáticas
                     if (layer.type === 'static_image') {
                         const s = new PIXI.Sprite(layer.texture);
                         s.anchor.set(0.5);
-                        // Aplicar transformaciones iniciales
                         const c = layer.config.static;
                         s.position.set(c.x, c.y);
                         s.rotation = (c.rotation || 0) * Math.PI / 180;
@@ -102,8 +210,6 @@
                     }
                     this.layers.push(layer);
                 });
-                
-                // Habilitar ordenamiento Z
                 this.parent.sortableChildren = true;
             }
 
@@ -127,17 +233,13 @@
 
             update(dt) {
                 this.globalTime += dt;
-
-                // 1. Procesar Spawns
                 this.layers.forEach(l => {
                     if (!l.visible) { l.container.visible = false; return; }
                     l.container.visible = true;
-                    if (l.type === 'static_image') return; // Las imágenes estáticas no emiten partículas
+                    if (l.type === 'static_image') return;
 
                     l.spawnTimer += dt;
                     let rate = l.config.emissionRate;
-
-                    // Gráfica de Tasa de Emisión
                     if (l.config.rateGraph && l.config.rateGraph.active) {
                         const dur = l.config.rateGraph.duration || 1;
                         const t = l.config.rateGraph.loop ? (this.globalTime % dur) : Math.min(this.globalTime, dur);
@@ -156,7 +258,6 @@
                     }
                 });
 
-                // 2. Actualizar Partículas
                 for (let i = this.particles.length - 1; i >= 0; i--) {
                     const p = this.particles[i];
                     if (p.active) {
@@ -171,12 +272,10 @@
             spawnParticle(layer) {
                 const c = layer.config;
                 let tex = layer.texture;
-                if (Array.isArray(tex)) tex = tex[0]; // Frame inicial si es secuencia
+                if (Array.isArray(tex)) tex = tex[0];
 
                 const sprite = new PIXI.Sprite(tex);
                 sprite.anchor.set(0.5);
-                
-                // Mapeo de BlendModes PixiJS
                 const blendMap = {
                     'normal': PIXI.BLEND_MODES.NORMAL,
                     'add': PIXI.BLEND_MODES.ADD,
@@ -184,10 +283,8 @@
                     'multiply': PIXI.BLEND_MODES.MULTIPLY
                 };
                 sprite.blendMode = blendMap[c.blendMode] || PIXI.BLEND_MODES.NORMAL;
-                
                 layer.container.addChild(sprite);
 
-                // --- FÍSICA E INICIALIZACIÓN ---
                 const p = {
                     sprite: sprite,
                     layer: layer,
@@ -202,11 +299,9 @@
                     alphaEnd: c.alpha.end,
                     rotationOffset: 0,
                     sizeMult: 1,
-                    color: { r: 255, g: 255, b: 255 },
                     emissionAngle: 0
                 };
 
-                // Posición Inicial (Geometría)
                 const ox = this.emitter.x;
                 const oy = this.emitter.y;
                 let sx = ox, sy = oy, sz = 0, ea = 0;
@@ -245,7 +340,6 @@
 
                 p.x = sx; p.y = sy; p.z = sz; p.emissionAngle = ea;
 
-                // Velocidad (Base + Random)
                 const baseSpd = c.speed.value !== undefined ? c.speed.value : 100;
                 const randSpd = c.speed.random !== undefined ? c.speed.random : 0;
                 const spd = baseSpd + (Math.random() * randSpd);
@@ -253,15 +347,11 @@
                 if (g.type === 'sphere') {
                     const dx = sx - ox, dy = sy - oy, dz = sz;
                     const mag = Math.hypot(dx, dy, dz) || 1;
-                    p.vx = (dx / mag) * spd;
-                    p.vy = (dy / mag) * spd;
-                    p.vz = (dz / mag) * spd;
+                    p.vx = (dx / mag) * spd; p.vy = (dy / mag) * spd; p.vz = (dz / mag) * spd;
                 } else {
-                    p.vx = Math.cos(ea) * spd;
-                    p.vy = Math.sin(ea) * spd;
+                    p.vx = Math.cos(ea) * spd; p.vy = Math.sin(ea) * spd;
                 }
 
-                // Transformaciones aleatorias
                 const tCfg = c.transform || { rotation: 0, randomRotation: 0, randomSize: 0, radialLock: false };
                 p.sizeMult = 1 - (Math.random() * tCfg.randomSize);
                 p.rotationOffset = (Math.random() - 0.5) * 2 * (tCfg.randomRotation * Math.PI / 180);
@@ -272,13 +362,8 @@
             updateParticle(p, dt) {
                 const c = p.layer.config;
                 p.age += dt;
+                if (p.age >= p.life) { p.active = false; return; }
 
-                if (p.age >= p.life) {
-                    p.active = false;
-                    return;
-                }
-
-                // Movimiento
                 p.vx += c.gravity.x * dt;
                 p.vy += c.gravity.y * dt;
                 p.x += p.vx * dt;
@@ -286,11 +371,8 @@
                 p.z += (p.vz || 0) * dt;
 
                 const t = p.age / p.life;
-                
-                // Escala
                 let currentScale = p.scaleStart * (1 - t) + p.scaleEnd * t;
 
-                // Opacidad (Gráfica vs Lineal)
                 let currentAlpha = 1;
                 if (c.opacityGraph && c.opacityGraph.active) {
                     let gt = p.age;
@@ -301,42 +383,29 @@
                     currentAlpha = p.alphaStart * (1 - t) + p.alphaEnd * t;
                 }
 
-                // Color (Gráfica)
                 if (c.colorGraph && c.colorGraph.active) {
                     let gt = p.age;
                     const dur = c.colorGraph.linkToLife ? p.life : c.colorGraph.duration;
                     if (c.colorGraph.loop) gt = gt % dur; else if (gt > dur) gt = dur;
-                    
                     const colData = this.evaluateColorGraph(c.colorGraph.nodes, gt / dur);
-                    
-                    // Aplicar intensidad del color (el valor Y de la gráfica de color)
                     const i = colData.i;
                     let r = colData.r, g = colData.g, b = colData.b;
-                    if (i > 0) { // Brillo
-                        r = r + (255 - r) * i;
-                        g = g + (255 - g) * i;
-                        b = b + (255 - b) * i;
-                    } else if (i < 0) { // Oscuridad
-                        const f = 1 + i;
-                        r *= f; g *= f; b *= f;
-                    }
+                    if (i > 0) { r += (255 - r) * i; g += (255 - g) * i; b += (255 - b) * i; } 
+                    else if (i < 0) { const f = 1 + i; r *= f; g *= f; b *= f; }
                     p.sprite.tint = (Math.floor(r) << 16) + (Math.floor(g) << 8) + Math.floor(b);
                 } else {
                     p.sprite.tint = 0xFFFFFF;
                 }
 
-                // Aplicar Opacidad Global
                 if (!c.opacityGraph || !c.opacityGraph.active) currentAlpha *= c.globalOpacity;
                 p.sprite.alpha = Math.max(0, Math.min(1, currentAlpha));
 
-                // Escala 3D fake (para esfera)
                 let perspectiveScale = 1;
                 if (c.geometry.type === 'sphere') { perspectiveScale = 1 + (p.z / 300); }
 
                 p.sprite.scale.set(currentScale * perspectiveScale * p.sizeMult);
                 p.sprite.position.set(p.x, p.y);
 
-                // Rotación
                 const tCfg = c.transform;
                 if (tCfg.radialLock) {
                     p.sprite.rotation = p.emissionAngle + (tCfg.rotation * Math.PI / 180);
@@ -344,7 +413,6 @@
                     p.sprite.rotation = (tCfg.rotation * Math.PI / 180) + p.rotationOffset;
                 }
 
-                // Animación de Secuencia
                 if (Array.isArray(p.layer.texture)) {
                     const frames = p.layer.texture;
                     const frameIdx = Math.floor(((p.age / p.life) * (c.animSpeed || 1)) % 1 * frames.length);
@@ -352,7 +420,6 @@
                 }
             }
 
-            // --- UTILIDADES MATEMÁTICAS ---
             renderGen(s, fn) { const c = document.createElement('canvas'); c.width = s; c.height = s; fn(c.getContext('2d')); return c; }
             hexToRgba(hex, alpha) {
                 if (!hex) return `rgba(255,255,255,${alpha})`;
@@ -405,10 +472,9 @@
         }
 
         // ==========================================
-        // SETUP DE LA DEMOSTRACIÓN
+        //  UI LOGIC
         // ==========================================
-        
-        // Inicializar PIXI Application
+
         const app = new PIXI.Application({
             width: window.innerWidth,
             height: window.innerHeight,
@@ -417,55 +483,87 @@
             resolution: window.devicePixelRatio || 1
         });
         document.body.appendChild(app.view);
+        document.body.appendChild(document.getElementById('ui-container'));
 
         let activeRuntime = null;
+        let currentIndex = -1;
 
-        // Manejar Carga de Archivo
-        document.getElementById('json-input').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+        const uiSelect = document.getElementById('json-select');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const lblTitle = document.getElementById('effect-title');
+        const lblCounter = document.getElementById('effect-counter');
+        const loadingIndicator = document.getElementById('loading');
 
-            const reader = new FileReader();
-            reader.onload = (evt) => {
-                try {
-                    const jsonData = JSON.parse(evt.target.result);
-                    
-                    // Limpiar runtime anterior si existe
-                    if (activeRuntime) {
-                        activeRuntime.destroy();
-                    }
+        function initUI() {
+            AVAILABLE_EXAMPLES.forEach((ex, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.innerText = ex.name;
+                uiSelect.appendChild(opt);
+            });
+            updateButtons();
+        }
 
-                    // Crear nuevo runtime
-                    activeRuntime = new PixiParticleRuntime(app.stage, jsonData);
-                    
-                    document.getElementById('status').innerText = `Cargado: ${jsonData.name || 'Sin Nombre'}`;
-                    document.getElementById('status').style.color = '#00e676';
+        async function loadExample(index) {
+            if (index < 0 || index >= AVAILABLE_EXAMPLES.length) return;
+            
+            const target = AVAILABLE_EXAMPLES[index];
+            loadingIndicator.style.display = 'block';
+            
+            try {
+                const response = await fetch(target.file);
+                if (!response.ok) throw new Error("404 Not Found");
+                
+                const jsonData = await response.json();
 
-                } catch (err) {
-                    console.error(err);
-                    alert("Error al leer el JSON");
-                }
-            };
-            reader.readAsText(file);
-        });
-
-        // Loop principal
-        app.ticker.add((delta) => {
-            if (activeRuntime) {
-                // Convertir delta de Pixi a segundos (aprox)
-                // En el editor usabas delta / 60
-                activeRuntime.update(delta / 60);
+                if (activeRuntime) activeRuntime.destroy();
+                activeRuntime = new PixiParticleRuntime(app.stage, jsonData);
+                
+                currentIndex = index;
+                uiSelect.value = index;
+                lblTitle.innerText = jsonData.name || target.name;
+                
+            } catch (err) {
+                console.error(err);
+                alert("Error cargando: " + target.file + "\n(¿Subiste el archivo al repo?)");
+            } finally {
+                loadingIndicator.style.display = 'none';
+                updateButtons();
             }
+        }
+
+        function updateButtons() {
+            btnPrev.disabled = currentIndex <= 0;
+            btnNext.disabled = currentIndex >= AVAILABLE_EXAMPLES.length - 1;
+            lblCounter.innerText = (currentIndex + 1) + " / " + AVAILABLE_EXAMPLES.length;
+        }
+
+        uiSelect.addEventListener('change', (e) => loadExample(parseInt(e.target.value)));
+        
+        btnPrev.addEventListener('click', () => {
+            if (currentIndex > 0) loadExample(currentIndex - 1);
+        });
+        
+        btnNext.addEventListener('click', () => {
+            if (currentIndex < AVAILABLE_EXAMPLES.length - 1) loadExample(currentIndex + 1);
         });
 
-        // Resize
         window.addEventListener('resize', () => {
             app.renderer.resize(window.innerWidth, window.innerHeight);
             if(activeRuntime) {
-                // Opcional: Centrar emisor al redimensionar
-                // activeRuntime.setEmitterPos(window.innerWidth/2, window.innerHeight/2);
+                activeRuntime.setEmitterPos(window.innerWidth/2, window.innerHeight/2);
             }
         });
+
+        app.ticker.add((delta) => {
+            if (activeRuntime) activeRuntime.update(delta / 60);
+        });
+
+        initUI();
+        if (AVAILABLE_EXAMPLES.length > 0) {
+            loadExample(0);
+        }
 
     </script>
 </body>
