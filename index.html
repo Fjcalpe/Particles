@@ -3,126 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Galería de Partículas PixiJS</title>
+    <title>Galería de Partículas PixiJS (Runtime V2)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <style>
         html, body { 
-            width: 100%;
-            height: 100%;
-            margin: 0; 
-            padding: 0;
-            background: #111; 
-            overflow: hidden; /* Evita scrollbars */
+            width: 100%; height: 100%; margin: 0; padding: 0;
+            background: #111; overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            color: white; 
-            touch-action: none;
+            color: white; touch-action: none;
         }
-        
-        canvas { 
-            display: block; 
-            width: 100%;
-            height: 100%;
-        }
+        canvas { display: block; width: 100%; height: 100%; }
 
+        /* UI STYLES */
         #ui-container {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            max-width: 500px;
-            z-index: 100;
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(10px);
-            padding: 15px;
-            border-radius: 16px;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 500px; z-index: 100;
+            background: rgba(20, 20, 20, 0.9); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 16px;
             border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column; gap: 10px;
         }
-
-        .header-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        }
-
-        h3 { margin: 0; font-size: 16px; color: #fff; font-weight: 600; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        h3 { margin: 0; font-size: 16px; color: #00e676; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
         .counter { font-size: 12px; color: #888; }
-
-        .controls-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .select-wrapper {
-            flex-grow: 1;
-            position: relative;
-        }
-
+        .controls-row { display: flex; gap: 10px; align-items: center; }
+        .select-wrapper { flex-grow: 1; position: relative; }
         select {
-            width: 100%;
-            padding: 12px;
-            background: #333;
-            color: white;
-            border: 1px solid #444;
-            border-radius: 8px;
-            font-size: 16px;
-            appearance: none;
-            outline: none;
+            width: 100%; padding: 12px; background: #333; color: white;
+            border: 1px solid #444; border-radius: 8px; font-size: 16px;
+            appearance: none; outline: none; cursor: pointer;
         }
-        
         .select-wrapper::after {
-            content: '▼';
-            font-size: 10px;
-            color: #aaa;
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
+            content: '▼'; font-size: 10px; color: #aaa; position: absolute;
+            right: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;
         }
-
         .nav-btn {
-            background: #e91e63;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            width: 44px;
-            height: 44px;
-            font-size: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-            flex-shrink: 0;
+            background: #e91e63; color: white; border: none; border-radius: 8px;
+            width: 44px; height: 44px; font-size: 20px; display: flex;
+            align-items: center; justify-content: center; cursor: pointer;
+            transition: background 0.2s; flex-shrink: 0;
         }
-
         .nav-btn:active { background: #c2185b; transform: scale(0.95); }
-        .nav-btn:disabled { background: #444; color: #777; }
-        
-        #btn-center {
-            background: #444;
-            color: #ddd;
-        }
-        #btn-center:active {
-            background: #666;
-            color: #fff;
-        }
-
+        .nav-btn:disabled { background: #444; color: #777; cursor: default; }
+        #btn-center { background: #2196f3; }
         #loading {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 14px;
-            pointer-events: none;
-            display: none;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #e91e63; font-weight:bold; font-size: 14px; pointer-events: none; display: none;
         }
     </style>
 </head>
@@ -132,15 +59,15 @@
 
     <div id="ui-container">
         <div class="header-row">
-            <h3 id="effect-title">Galería de Efectos</h3>
+            <h3 id="effect-title">Galería</h3>
             <span class="counter" id="effect-counter">0 / 0</span>
         </div>
         <div class="controls-row">
-            <button class="nav-btn" id="btn-center" title="Recentrar Emisor">🎯</button>
+            <button class="nav-btn" id="btn-center" title="Recentrar">🎯</button>
             <button class="nav-btn" id="btn-prev">❮</button>
             <div class="select-wrapper">
                 <select id="json-select">
-                    <option value="" disabled selected>Selecciona efecto...</option>
+                    <option value="" disabled selected>Seleccionar...</option>
                 </select>
             </div>
             <button class="nav-btn" id="btn-next">❯</button>
@@ -149,347 +76,350 @@
 
     <script>
         // ==========================================
-        //  LISTA DE ARCHIVOS
+        //  CONFIGURACIÓN DE ARCHIVOS
+        //  (Asegúrate de que estos .json existen en la misma carpeta)
         // ==========================================
         const AVAILABLE_EXAMPLES = [
             { name: "Monedas", file: "monedas.json" },
-            { name: "1",       file: "1.json" },
-            { name: "2",       file: "2.json" },
-            { name: "3",       file: "3.json" },
-            { name: "4",       file: "4.json" }
+            { name: "Ejemplo 1", file: "1.json" },
+            { name: "Ejemplo 2", file: "2.json" },
+            { name: "Ejemplo 3", file: "3.json" },
+            { name: "Ejemplo 4", file: "4.json" }
         ];
 
         // ==========================================
-        //  CLASE DEL MOTOR (RUNTIME)
+        //  CLASE RUNTIME V2.0 (ACTUALIZADA)
         // ==========================================
         class PixiParticleRuntime {
-            constructor(parentContainer, jsonData) {
-                this.parent = parentContainer;
+            constructor(pixiContainer) {
+                this.container = pixiContainer;
                 this.layers = [];
                 this.particles = [];
                 this.globalTime = 0;
-                // Inicializar en el centro exacto de la ventana actual
-                this.emitter = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-                
-                this.Generators = {
-                    glow: (c) => this.renderGen(64, x => { const g = x.createRadialGradient(32,32,2, 32,32,30); g.addColorStop(0, c); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,64,64); }),
-                    hardCircle: (c) => this.renderGen(64, x => { x.fillStyle = c; x.beginPath(); x.arc(32,32,30,0,Math.PI*2); x.fill(); }),
-                    smoke: (c) => this.renderGen(64, x => { const g = x.createRadialGradient(32,32,10, 32,32,32); g.addColorStop(0, this.hexToRgba(c, 0.8)); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0,0,64,64); }),
-                    ring: (c) => this.renderGen(64, x => { x.strokeStyle = c; x.lineWidth = 4; x.beginPath(); x.arc(32,32,25,0,Math.PI*2); x.stroke(); })
-                };
-
-                this.init(jsonData);
+                this.active = true;
             }
 
+            // Método helper para mover todo el sistema (usado por el botón de centrar)
             setEmitterPos(x, y) {
-                this.emitter.x = x;
-                this.emitter.y = y;
+                this.container.position.set(x, y);
             }
 
             destroy() {
-                this.layers.forEach(l => {
-                    if (l.container) l.container.destroy({ children: true });
-                });
-                this.layers = [];
+                this.particles.forEach(p => p.sprite.destroy());
                 this.particles = [];
+                this.layers.forEach(l => l.pixiContainer.destroy({children:true}));
+                this.layers = [];
+                this.globalTime = 0;
             }
 
-            init(data) {
-                if (data.bg) document.body.style.background = data.bg;
-                const layerData = data.layers || data;
+            load(data) {
+                this.destroy();
+                const config = (typeof data === 'string') ? JSON.parse(data) : data;
                 
-                layerData.forEach((ld, index) => {
+                // Color de fondo opcional desde el JSON
+                if(config.bg) document.body.style.background = config.bg;
+
+                const layersData = Array.isArray(config) ? config : (config.layers || []);
+
+                layersData.forEach(ld => {
                     const layer = {
-                        config: ld.config,
+                        id: Math.random(),
+                        config: JSON.parse(JSON.stringify(ld.config)),
                         source: ld.source,
-                        type: ld.renderType || 'particle_system',
-                        visible: ld.visible !== false,
-                        container: new PIXI.Container(),
+                        renderType: ld.renderType || 'particle_system',
+                        pixiContainer: new PIXI.Container(),
                         spawnTimer: 0,
-                        texture: null
+                        texture: null,
+                        visible: ld.visible !== false
                     };
-                    layer.container.zIndex = index;
-                    this.generateTextureForLayer(layer);
 
-                    if (layer.type === 'static_image') {
-                        const s = new PIXI.Sprite(layer.texture);
-                        s.anchor.set(0.5);
-                        const c = layer.config.static;
-                        s.position.set(c.x, c.y);
-                        s.rotation = (c.rotation || 0) * Math.PI / 180;
-                        s.scale.set(c.scale !== undefined ? c.scale : 1);
-                        s.alpha = c.opacity !== undefined ? c.opacity : 1;
-                        layer.container.addChild(s);
+                    // Sanitización de configs antiguas
+                    if(!layer.config.anim) layer.config.anim = { pulse: {size:0, speed:1}, flash:{mag:0, speed:1}, jitter:{radius:0, speed:1} };
+                    if(!layer.config.transform) layer.config.transform = { rotation:0, randomRotation:0, randomSize:0, radialLock:false };
+
+                    layer.pixiContainer.zIndex = this.layers.length;
+                    this._generateTexture(layer);
+
+                    // Setup para Imágenes Estáticas
+                    if(layer.renderType === 'static_image') {
+                        if(layer.texture) {
+                            const s = new PIXI.Sprite(layer.texture);
+                            s.anchor.set(0.5);
+                            s.position.set(layer.config.static.x, layer.config.static.y);
+                            s.rotation = layer.config.static.rotation * Math.PI/180;
+                            s.scale.set(layer.config.static.scale);
+                            s.alpha = layer.config.static.opacity;
+                            layer.pixiContainer.addChild(s);
+                        }
                     }
 
-                    if (layer.visible) {
-                        this.parent.addChild(layer.container);
-                    }
+                    this.container.addChild(layer.pixiContainer);
                     this.layers.push(layer);
                 });
-                this.parent.sortableChildren = true;
-            }
-
-            generateTextureForLayer(layer) {
-                const s = layer.source;
-                if (s.type === 'generator') {
-                    if (this.Generators[s.genType]) {
-                        const canvas = this.Generators[s.genType](s.genColor || '#ffffff');
-                        layer.texture = PIXI.Texture.from(canvas);
-                    } else {
-                        layer.texture = PIXI.Texture.WHITE;
-                    }
-                } else if (s.type === 'image' && s.imageSrc) {
-                    layer.texture = PIXI.Texture.from(s.imageSrc);
-                } else if (s.type === 'sequence' && s.sequenceSrcs) {
-                    layer.texture = s.sequenceSrcs.map(src => PIXI.Texture.from(src));
-                } else {
-                    layer.texture = PIXI.Texture.WHITE;
-                }
+                this.container.sortableChildren = true;
             }
 
             update(dt) {
+                if(!this.active) return;
                 this.globalTime += dt;
+
+                // 1. Emisión
                 this.layers.forEach(l => {
-                    if (!l.visible) { l.container.visible = false; return; }
-                    l.container.visible = true;
-                    if (l.type === 'static_image') return;
+                    if(!l.visible) { l.pixiContainer.visible = false; return; }
+                    l.pixiContainer.visible = true;
+                    if(l.renderType !== 'particle_system') return;
 
                     l.spawnTimer += dt;
                     let rate = l.config.emissionRate;
-                    if (l.config.rateGraph && l.config.rateGraph.active) {
+                    
+                    if(l.config.rateGraph && l.config.rateGraph.active) {
                         const dur = l.config.rateGraph.duration || 1;
                         const t = l.config.rateGraph.loop ? (this.globalTime % dur) : Math.min(this.globalTime, dur);
-                        const val = this.evaluateGraph(l.config.rateGraph.nodes, t / dur);
-                        rate = rate * val;
+                        rate = rate * this._evaluateGraph(l.config.rateGraph.nodes, t/dur);
                     }
 
-                    if (rate > 0.1) {
+                    if(rate > 0.1) {
                         const interval = 1.0 / rate;
-                        while (l.spawnTimer >= interval) {
+                        while(l.spawnTimer >= interval) {
                             l.spawnTimer -= interval;
-                            this.spawnParticle(l);
+                            this._spawnParticle(l);
                         }
                     } else {
                         l.spawnTimer = 0;
                     }
                 });
 
+                // 2. Actualización de Partículas
                 for (let i = this.particles.length - 1; i >= 0; i--) {
                     const p = this.particles[i];
-                    if (p.active) {
-                        this.updateParticle(p, dt);
-                    } else {
+                    const c = p.layer.config;
+                    
+                    p.age += dt;
+                    if(p.age >= p.life) {
                         p.sprite.destroy();
                         this.particles.splice(i, 1);
+                        continue;
+                    }
+
+                    // Física
+                    p.vx += c.gravity.x * dt;
+                    p.vy += c.gravity.y * dt;
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.z += (p.vz||0) * dt;
+
+                    const t = p.age / p.life;
+
+                    // --- NUEVAS ANIMACIONES (V18.5) ---
+                    
+                    // Escala + Pulso
+                    let currS = p.scaleStart * (1 - t) + p.scaleEnd * t;
+                    if (c.anim && c.anim.pulse && c.anim.pulse.size > 0) {
+                        const sine = Math.sin(p.age * c.anim.pulse.speed * 5);
+                        currS *= (1 + sine * c.anim.pulse.size);
+                    }
+
+                    // Opacidad
+                    let currA = p.alphaStart * (1 - t) + p.alphaEnd * t;
+                    if(c.opacityGraph && c.opacityGraph.active) {
+                        let gt = p.age; const dur = c.opacityGraph.linkToLife ? p.life : c.opacityGraph.duration;
+                        if(c.opacityGraph.loop) gt = gt % dur; else if(gt > dur) gt = dur;
+                        currA = this._evaluateGraph(c.opacityGraph.nodes, gt/dur);
+                    }
+                    currA *= c.globalOpacity !== undefined ? c.globalOpacity : 1;
+
+                    // Color + Flash
+                    const color = {r:255, g:255, b:255};
+                    if(c.colorGraph && c.colorGraph.active) {
+                        let gt = p.age; const dur = c.colorGraph.linkToLife ? p.life : c.colorGraph.duration;
+                        if(c.colorGraph.loop) gt = gt % dur; else if(gt > dur) gt = dur;
+                        const colData = this._evaluateColorGraph(c.colorGraph.nodes, gt/dur);
+                        color.r = colData.r; color.g = colData.g; color.b = colData.b;
+                    }
+                    
+                    if (c.anim && c.anim.flash && c.anim.flash.mag > 0) {
+                        const flashSine = (Math.sin(p.age * c.anim.flash.speed * 5) + 1) / 2;
+                        const intensity = flashSine * c.anim.flash.mag;
+                        color.r += (255 - color.r) * intensity;
+                        color.g += (255 - color.g) * intensity;
+                        color.b += (255 - color.b) * intensity;
+                    }
+
+                    // Jitter
+                    let jx = 0, jy = 0;
+                    if (c.anim && c.anim.jitter && c.anim.jitter.radius > 0) {
+                        const jSpeed = c.anim.jitter.speed * 2;
+                        jx = Math.sin(p.age * jSpeed + p.id) * c.anim.jitter.radius;
+                        jy = Math.cos(p.age * jSpeed + p.id * 0.5) * c.anim.jitter.radius;
+                    }
+
+                    // Render
+                    let perspective = 1;
+                    if (c.geometry.type === 'sphere') perspective = 1 + (p.z / 300);
+
+                    // Animación Textura
+                    if(Array.isArray(p.layer.texture) && p.layer.texture.length > 0) {
+                        const frame = Math.floor(((p.age/p.life) * (c.animSpeed||1)) % 1 * p.layer.texture.length);
+                        p.sprite.texture = p.layer.texture[frame] || p.layer.texture[0];
+                    }
+
+                    p.sprite.position.set(p.x + jx, p.y + jy);
+                    p.sprite.scale.set(currS * perspective * p.sizeMult);
+                    p.sprite.alpha = Math.max(0, Math.min(1, currA));
+                    
+                    if(c.colorGraph?.active || c.anim?.flash?.mag > 0) {
+                        p.sprite.tint = (Math.floor(color.r) << 16) + (Math.floor(color.g) << 8) + Math.floor(color.b);
+                    } else {
+                        p.sprite.tint = 0xFFFFFF;
+                    }
+
+                    if(c.transform.radialLock) {
+                        p.sprite.rotation = p.emissionAngle + (c.transform.rotation * Math.PI / 180);
+                    } else {
+                        p.sprite.rotation = (c.transform.rotation * Math.PI / 180) + p.rotOffset;
                     }
                 }
             }
 
-            spawnParticle(layer) {
+            // --- HELPERS ---
+            _spawnParticle(layer) {
                 const c = layer.config;
-                let tex = layer.texture;
-                if (Array.isArray(tex)) tex = tex[0];
-
-                const sprite = new PIXI.Sprite(tex);
+                const tex = Array.isArray(layer.texture) ? layer.texture[0] : layer.texture;
+                const sprite = new PIXI.Sprite(tex || PIXI.Texture.WHITE);
                 sprite.anchor.set(0.5);
-                const blendMap = {
-                    'normal': PIXI.BLEND_MODES.NORMAL,
-                    'add': PIXI.BLEND_MODES.ADD,
-                    'screen': PIXI.BLEND_MODES.SCREEN,
-                    'multiply': PIXI.BLEND_MODES.MULTIPLY
-                };
-                sprite.blendMode = blendMap[c.blendMode] || PIXI.BLEND_MODES.NORMAL;
-                layer.container.addChild(sprite);
+                
+                const mapBlend = { 'normal': PIXI.BLEND_MODES.NORMAL, 'add': PIXI.BLEND_MODES.ADD, 'screen': PIXI.BLEND_MODES.SCREEN, 'multiply': PIXI.BLEND_MODES.MULTIPLY };
+                sprite.blendMode = mapBlend[c.blendMode] || PIXI.BLEND_MODES.NORMAL;
+                
+                layer.pixiContainer.addChild(sprite);
 
-                const p = {
-                    sprite: sprite,
-                    layer: layer,
-                    active: true,
-                    age: 0,
-                    life: c.life.min + Math.random() * (c.life.max - c.life.min),
-                    x: 0, y: 0, z: 0,
-                    vx: 0, vy: 0, vz: 0,
-                    scaleStart: c.scale.start,
-                    scaleEnd: c.scale.end,
-                    alphaStart: c.alpha.start,
-                    alphaEnd: c.alpha.end,
-                    rotationOffset: 0,
-                    sizeMult: 1,
-                    emissionAngle: 0
-                };
-
-                const ox = this.emitter.x;
-                const oy = this.emitter.y;
-                let sx = ox, sy = oy, sz = 0, ea = 0;
+                let sx=0, sy=0, sz=0, ea=0; 
                 const g = c.geometry;
-
-                if (g.type === 'point') {
-                    ea = (c.rotation.min + Math.random() * (c.rotation.max - c.rotation.min)) * Math.PI / 180;
-                } 
-                else if (g.type === 'ellipse') {
-                    const rot = g.ellipse.rotation * Math.PI / 180;
-                    const t = (g.ellipse.minAngle + Math.random() * (g.ellipse.maxAngle - g.ellipse.minAngle)) * Math.PI / 180;
-                    const lx = Math.cos(t) * g.ellipse.rx;
-                    const ly = Math.sin(t) * g.ellipse.ry;
-                    sx = ox + lx * Math.cos(rot) - ly * Math.sin(rot);
-                    sy = oy + lx * Math.sin(rot) + ly * Math.cos(rot);
-                    ea = t + rot;
+                
+                if (g.type === 'point') ea=(c.rotation.min+Math.random()*(c.rotation.max-c.rotation.min))*Math.PI/180; 
+                else if (g.type === 'ellipse') { 
+                    const rot=g.ellipse.rotation*Math.PI/180;
+                    const t=(g.ellipse.minAngle+Math.random()*(g.ellipse.maxAngle-g.ellipse.minAngle))*Math.PI/180; 
+                    const lx=Math.cos(t)*g.ellipse.rx, ly=Math.sin(t)*g.ellipse.ry; 
+                    sx=lx*Math.cos(rot)-ly*Math.sin(rot); sy=lx*Math.sin(rot)+ly*Math.cos(rot); ea=t+rot; 
                 }
                 else if (g.type === 'line') {
-                    const rad = g.line.angle * Math.PI / 180;
-                    const t = (Math.random() - 0.5) * g.line.len;
-                    sx = ox + Math.cos(rad) * t;
-                    sy = oy + Math.sin(rad) * t;
-                    ea = rad - Math.PI / 2;
+                    const rad=g.line.angle*Math.PI/180;
+                    const t=(Math.random()-0.5)*g.line.len;
+                    sx=Math.cos(rad)*t; sy=Math.sin(rad)*t; ea=rad-Math.PI/2;
                 }
                 else if (g.type === 'sphere') {
-                    const u = Math.random();
-                    const v = Math.random();
-                    const theta = 2 * Math.PI * u;
-                    const phi = Math.acos(2 * v - 1);
-                    const r = g.sphere.radius;
-                    sx = ox + r * Math.sin(phi) * Math.cos(theta);
-                    sy = oy + r * Math.sin(phi) * Math.sin(theta);
-                    sz = r * Math.cos(phi);
-                    ea = Math.atan2(sy - oy, sx - ox);
+                    const u=Math.random(), v=Math.random(), theta=2*Math.PI*u, phi=Math.acos(2*v-1), r=g.sphere.radius;
+                    sx=r*Math.sin(phi)*Math.cos(theta); sy=r*Math.sin(phi)*Math.sin(theta); sz=r*Math.cos(phi); ea=Math.atan2(sy, sx);
                 }
-
-                p.x = sx; p.y = sy; p.z = sz; p.emissionAngle = ea;
 
                 const baseSpd = c.speed.value !== undefined ? c.speed.value : 100;
                 const randSpd = c.speed.random !== undefined ? c.speed.random : 0;
                 const spd = baseSpd + (Math.random() * randSpd);
 
-                if (g.type === 'sphere') {
-                    const dx = sx - ox, dy = sy - oy, dz = sz;
-                    const mag = Math.hypot(dx, dy, dz) || 1;
-                    p.vx = (dx / mag) * spd; p.vy = (dy / mag) * spd; p.vz = (dz / mag) * spd;
+                let vx, vy, vz=0;
+                if(g.type==='sphere') {
+                    const mag = Math.hypot(sx,sy,sz)||1; vx=(sx/mag)*spd; vy=(sy/mag)*spd; vz=(sz/mag)*spd;
                 } else {
-                    p.vx = Math.cos(ea) * spd; p.vy = Math.sin(ea) * spd;
+                    vx=Math.cos(ea)*spd; vy=Math.sin(ea)*spd;
                 }
-
-                const tCfg = c.transform || { rotation: 0, randomRotation: 0, randomSize: 0, radialLock: false };
-                p.sizeMult = 1 - (Math.random() * tCfg.randomSize);
-                p.rotationOffset = (Math.random() - 0.5) * 2 * (tCfg.randomRotation * Math.PI / 180);
-
-                this.particles.push(p);
-            }
-
-            updateParticle(p, dt) {
-                const c = p.layer.config;
-                p.age += dt;
-                if (p.age >= p.life) { p.active = false; return; }
-
-                p.vx += c.gravity.x * dt;
-                p.vy += c.gravity.y * dt;
-                p.x += p.vx * dt;
-                p.y += p.vy * dt;
-                p.z += (p.vz || 0) * dt;
-
-                const t = p.age / p.life;
-                let currentScale = p.scaleStart * (1 - t) + p.scaleEnd * t;
-
-                let currentAlpha = 1;
-                if (c.opacityGraph && c.opacityGraph.active) {
-                    let gt = p.age;
-                    const dur = c.opacityGraph.linkToLife ? p.life : c.opacityGraph.duration;
-                    if (c.opacityGraph.loop) gt = gt % dur; else if (gt > dur) gt = dur;
-                    currentAlpha = this.evaluateGraph(c.opacityGraph.nodes, gt / dur);
-                } else {
-                    currentAlpha = p.alphaStart * (1 - t) + p.alphaEnd * t;
-                }
-
-                if (c.colorGraph && c.colorGraph.active) {
-                    let gt = p.age;
-                    const dur = c.colorGraph.linkToLife ? p.life : c.colorGraph.duration;
-                    if (c.colorGraph.loop) gt = gt % dur; else if (gt > dur) gt = dur;
-                    const colData = this.evaluateColorGraph(c.colorGraph.nodes, gt / dur);
-                    const i = colData.i;
-                    let r = colData.r, g = colData.g, b = colData.b;
-                    if (i > 0) { r += (255 - r) * i; g += (255 - g) * i; b += (255 - b) * i; } 
-                    else if (i < 0) { const f = 1 + i; r *= f; g *= f; b *= f; }
-                    p.sprite.tint = (Math.floor(r) << 16) + (Math.floor(g) << 8) + Math.floor(b);
-                } else {
-                    p.sprite.tint = 0xFFFFFF;
-                }
-
-                if (!c.opacityGraph || !c.opacityGraph.active) currentAlpha *= c.globalOpacity;
-                p.sprite.alpha = Math.max(0, Math.min(1, currentAlpha));
-
-                let perspectiveScale = 1;
-                if (c.geometry.type === 'sphere') { perspectiveScale = 1 + (p.z / 300); }
-
-                p.sprite.scale.set(currentScale * perspectiveScale * p.sizeMult);
-                p.sprite.position.set(p.x, p.y);
 
                 const tCfg = c.transform;
-                if (tCfg.radialLock) {
-                    p.sprite.rotation = p.emissionAngle + (tCfg.rotation * Math.PI / 180);
-                } else {
-                    p.sprite.rotation = (tCfg.rotation * Math.PI / 180) + p.rotationOffset;
-                }
+                const sizeMult = 1 - (Math.random() * tCfg.randomSize);
+                const rotOffset = (Math.random() - 0.5) * 2 * (tCfg.randomRotation * Math.PI / 180);
 
-                if (Array.isArray(p.layer.texture)) {
-                    const frames = p.layer.texture;
-                    const frameIdx = Math.floor(((p.age / p.life) * (c.animSpeed || 1)) % 1 * frames.length);
-                    p.sprite.texture = frames[frameIdx] || frames[0];
+                this.particles.push({
+                    id: Math.random(), layer: layer, sprite: sprite, active: true, age: 0,
+                    life: c.life.min + Math.random()*(c.life.max - c.life.min),
+                    x: sx, y: sy, z: sz, vx: vx, vy: vy, vz: vz,
+                    emissionAngle: ea, sizeMult: sizeMult, rotOffset: rotOffset,
+                    scaleStart: c.scale.start, scaleEnd: c.scale.end,
+                    alphaStart: c.alpha.start, alphaEnd: c.alpha.end
+                });
+            }
+
+            _generateTexture(layer) {
+                if(layer.source.type === 'image' && layer.source.imageSrc) {
+                    layer.texture = PIXI.Texture.from(layer.source.imageSrc); return;
+                }
+                if(layer.source.type === 'sequence' && layer.source.sequenceSrcs) {
+                    layer.texture = layer.source.sequenceSrcs.map(s => PIXI.Texture.from(s)); return;
+                }
+                if(layer.source.type === 'generator') {
+                    const type = layer.source.genType || 'glow';
+                    const color = layer.source.genColor || '#ffaa00';
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 64; canvas.height = 64;
+                    const ctx = canvas.getContext('2d');
+                    
+                    if(type==='glow') {
+                        const g = ctx.createRadialGradient(32,32,2, 32,32,30);
+                        g.addColorStop(0, color); g.addColorStop(1, 'rgba(0,0,0,0)');
+                        ctx.fillStyle = g; ctx.fillRect(0,0,64,64);
+                    } else if(type==='hardCircle') {
+                        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(32,32,30,0,Math.PI*2); ctx.fill();
+                    } else if(type==='smoke') {
+                        const g = ctx.createRadialGradient(32,32,10, 32,32,32);
+                        const rgb = this._hexToRgb(color);
+                        g.addColorStop(0, `rgba(${rgb.r},${rgb.g},${rgb.b},0.8)`);
+                        g.addColorStop(1, 'rgba(0,0,0,0)');
+                        ctx.fillStyle = g; ctx.fillRect(0,0,64,64);
+                    } else if(type==='ring') {
+                        ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(32,32,25,0,Math.PI*2); ctx.stroke();
+                    }
+                    layer.texture = PIXI.Texture.from(canvas);
                 }
             }
 
-            renderGen(s, fn) { const c = document.createElement('canvas'); c.width = s; c.height = s; fn(c.getContext('2d')); return c; }
-            hexToRgba(hex, alpha) {
-                if (!hex) return `rgba(255,255,255,${alpha})`;
-                const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
-                return `rgba(${r},${g},${b},${alpha})`;
-            }
-            hexToRgbObj(hex) { const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16); return {r,g,b}; }
-            
-            evaluateGraph(points, t) {
-                if (!points.length) return 1;
-                if (t <= points[0].x) return points[0].y;
-                if (t >= points[points.length - 1].x) return points[points.length - 1].y;
-                for (let i = 0; i < points.length - 1; i++) {
-                    if (t >= points[i].x && t <= points[i + 1].x) {
-                        const localT = (t - points[i].x) / (points[i + 1].x - points[i].x);
-                        if (points[i].type === 'smooth') {
+            _evaluateGraph(points, t) {
+                if(!points || !points.length) return 1;
+                if(t<=points[0].x) return points[0].y;
+                if(t>=points[points.length-1].x) return points[points.length-1].y;
+                for(let i=0; i<points.length-1; i++) {
+                    if(t >= points[i].x && t <= points[i+1].x) {
+                        const localT = (t - points[i].x) / (points[i+1].x - points[i].x);
+                        if(points[i].type === 'smooth') {
                             const mu2 = (1 - Math.cos(localT * Math.PI)) / 2;
-                            return points[i].y * (1 - mu2) + points[i + 1].y * mu2;
-                        } else return points[i].y + (points[i + 1].y - points[i].y) * localT;
+                            return points[i].y * (1 - mu2) + points[i+1].y * mu2;
+                        }
+                        return points[i].y + (points[i+1].y - points[i].y) * localT;
                     }
                 }
                 return 1;
             }
 
-            evaluateColorGraph(points, t) {
-                if (!points.length) return { r: 255, g: 255, b: 255, i: 0 };
-                const sPoints = [...points].sort((a, b) => a.x - b.x);
-                if (t <= sPoints[0].x) { const c = this.hexToRgbObj(sPoints[0].color); return { r: c.r, g: c.g, b: c.b, i: sPoints[0].y }; }
-                if (t >= sPoints[sPoints.length - 1].x) { const c = this.hexToRgbObj(sPoints[sPoints.length - 1].color); return { r: c.r, g: c.g, b: c.b, i: sPoints[sPoints.length - 1].y }; }
-                for (let i = 0; i < sPoints.length - 1; i++) {
-                    if (t >= sPoints[i].x && t <= sPoints[i + 1].x) {
-                        const localT = (t - sPoints[i].x) / (sPoints[i + 1].x - sPoints[i].x);
-                        const c1 = this.hexToRgbObj(sPoints[i].color);
-                        const c2 = this.hexToRgbObj(sPoints[i + 1].color);
-                        const i1 = sPoints[i].y;
-                        const i2 = sPoints[i + 1].y;
-                        const r = c1.r + (c2.r - c1.r) * localT;
-                        const g = c1.g + (c2.g - c1.g) * localT;
-                        const b = c1.b + (c2.b - c1.b) * localT;
-                        let yVal;
-                        if (sPoints[i].type === 'smooth') {
-                            const mu2 = (1 - Math.cos(localT * Math.PI)) / 2;
-                            yVal = i1 * (1 - mu2) + i2 * mu2;
-                        } else yVal = i1 + (i2 - i1) * localT;
-                        return { r, g, b, i: yVal };
+            _evaluateColorGraph(points, t) {
+                if(!points || !points.length) return {r:255,g:255,b:255};
+                const sPoints = [...points].sort((a,b)=>a.x-b.x);
+                if(t <= sPoints[0].x) return this._hexToRgb(sPoints[0].color);
+                if(t >= sPoints[sPoints.length-1].x) return this._hexToRgb(sPoints[sPoints.length-1].color);
+                
+                for(let i=0; i<sPoints.length-1; i++) {
+                    if(t >= sPoints[i].x && t <= sPoints[i+1].x) {
+                        const localT = (t - sPoints[i].x) / (sPoints[i+1].x - sPoints[i].x);
+                        const c1 = this._hexToRgb(sPoints[i].color);
+                        const c2 = this._hexToRgb(sPoints[i+1].color);
+                        return {
+                            r: c1.r + (c2.r - c1.r) * localT,
+                            g: c1.g + (c2.g - c1.g) * localT,
+                            b: c1.b + (c2.b - c1.b) * localT
+                        };
                     }
                 }
-                return { r: 255, g: 255, b: 255, i: 0 };
+                return {r:255,g:255,b:255};
+            }
+
+            _hexToRgb(hex) {
+                if(!hex) return {r:255,g:255,b:255};
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return {r,g,b};
             }
         }
 
         // ==========================================
-        //  UI LOGIC
+        //  UI / INTERACCIÓN
         // ==========================================
 
         const app = new PIXI.Application({
@@ -501,6 +431,11 @@
         });
         document.body.appendChild(app.view);
         document.body.appendChild(document.getElementById('ui-container'));
+
+        // Crear el contenedor principal centrado
+        const mainContainer = new PIXI.Container();
+        mainContainer.position.set(window.innerWidth/2, window.innerHeight/2);
+        app.stage.addChild(mainContainer);
 
         let activeRuntime = null;
         let currentIndex = -1;
@@ -536,18 +471,18 @@
                 const jsonData = await response.json();
 
                 if (activeRuntime) activeRuntime.destroy();
-                activeRuntime = new PixiParticleRuntime(app.stage, jsonData);
                 
-                // Aseguramos centrado inmediato al cargar
-                forceResize();
-
+                // Instanciar runtime V2 con el contenedor principal
+                activeRuntime = new PixiParticleRuntime(mainContainer);
+                activeRuntime.load(jsonData);
+                
                 currentIndex = index;
                 uiSelect.value = index;
                 lblTitle.innerText = jsonData.name || target.name;
                 
             } catch (err) {
                 console.error(err);
-                alert("Error cargando: " + target.file + "\n(¿Subiste el archivo al repo?)");
+                alert("Error cargando: " + target.file + "\n(¿El archivo está en la carpeta?)");
             } finally {
                 loadingIndicator.style.display = 'none';
                 updateButtons();
@@ -560,43 +495,35 @@
             lblCounter.innerText = (currentIndex + 1) + " / " + AVAILABLE_EXAMPLES.length;
         }
 
+        // --- Event Listeners ---
         uiSelect.addEventListener('change', (e) => loadExample(parseInt(e.target.value)));
         
-        btnPrev.addEventListener('click', () => {
-            if (currentIndex > 0) loadExample(currentIndex - 1);
-        });
-        
-        btnNext.addEventListener('click', () => {
-            if (currentIndex < AVAILABLE_EXAMPLES.length - 1) loadExample(currentIndex + 1);
-        });
+        btnPrev.addEventListener('click', () => { if (currentIndex > 0) loadExample(currentIndex - 1); });
+        btnNext.addEventListener('click', () => { if (currentIndex < AVAILABLE_EXAMPLES.length - 1) loadExample(currentIndex + 1); });
 
-        // Evento del botón de centrar
         btnCenter.addEventListener('click', () => {
-            if (activeRuntime) {
-                activeRuntime.setEmitterPos(window.innerWidth / 2, window.innerHeight / 2);
-            }
+            forceResize(); // Re-centrar
         });
 
-        // Lógica de redimensionamiento centralizada
+        // Resize Logic
         function forceResize() {
             const w = window.innerWidth;
             const h = window.innerHeight;
             app.renderer.resize(w, h);
-            if(activeRuntime) {
-                activeRuntime.setEmitterPos(w / 2, h / 2);
-            }
+            // Centrar siempre el contenedor principal
+            mainContainer.position.set(w / 2, h / 2);
         }
 
         window.addEventListener('resize', forceResize);
-        window.addEventListener('orientationchange', () => {
-            // Breve retraso para asegurar que el navegador actualizó las dimensiones
-            setTimeout(forceResize, 100);
-        });
+        window.addEventListener('orientationchange', () => setTimeout(forceResize, 100));
 
+        // Game Loop
         app.ticker.add((delta) => {
+            // Importante: delta en Pixi es frames, convertimos a segundos aprox.
             if (activeRuntime) activeRuntime.update(delta / 60);
         });
 
+        // Inicio
         initUI();
         if (AVAILABLE_EXAMPLES.length > 0) {
             loadExample(0);
