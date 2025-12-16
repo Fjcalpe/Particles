@@ -3,26 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Galería de Partículas PixiJS</title>
+    <title>Galería de Partículas PixiJS (Runtime V18.16)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.3.2/pixi.min.js"></script>
     <style>
-        html, body { 
-            width: 100%;
-            height: 100%;
+        body { 
             margin: 0; 
-            padding: 0;
             background: #111; 
-            overflow: hidden; /* Evita scrollbars */
+            overflow: hidden; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             color: white; 
             touch-action: none;
         }
         
-        canvas { 
-            display: block; 
-            width: 100%;
-            height: 100%;
-        }
+        canvas { display: block; }
 
         #ui-container {
             position: absolute;
@@ -100,20 +93,10 @@
             justify-content: center;
             cursor: pointer;
             transition: background 0.2s;
-            flex-shrink: 0;
         }
 
         .nav-btn:active { background: #c2185b; transform: scale(0.95); }
         .nav-btn:disabled { background: #444; color: #777; }
-        
-        #btn-center {
-            background: #444;
-            color: #ddd;
-        }
-        #btn-center:active {
-            background: #666;
-            color: #fff;
-        }
 
         #loading {
             position: absolute;
@@ -136,13 +119,14 @@
             <span class="counter" id="effect-counter">0 / 0</span>
         </div>
         <div class="controls-row">
-            <button class="nav-btn" id="btn-center" title="Recentrar Emisor">🎯</button>
             <button class="nav-btn" id="btn-prev">❮</button>
+            
             <div class="select-wrapper">
                 <select id="json-select">
                     <option value="" disabled selected>Selecciona efecto...</option>
                 </select>
             </div>
+
             <button class="nav-btn" id="btn-next">❯</button>
         </div>
     </div>
@@ -160,7 +144,7 @@
         ];
 
         // ==========================================
-        //  CLASE DEL MOTOR (RUNTIME)
+        //  CLASE DEL MOTOR (RUNTIME V18.16)
         // ==========================================
         class PixiParticleRuntime {
             constructor(parentContainer, jsonData) {
@@ -168,7 +152,6 @@
                 this.layers = [];
                 this.particles = [];
                 this.globalTime = 0;
-                // Inicializar en el centro exacto de la ventana actual
                 this.emitter = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
                 
                 this.Generators = {
@@ -208,6 +191,12 @@
                         spawnTimer: 0,
                         texture: null
                     };
+
+                    // Compatibilidad con JSONs antiguos
+                    if (layer.type === 'particle_system' && !layer.config.anim) {
+                        layer.config.anim = { pulse: {size:0}, flash: {mag:0}, jitter: {radius:0} };
+                    }
+
                     layer.container.zIndex = index;
                     this.generateTextureForLayer(layer);
 
@@ -297,12 +286,14 @@
                     'normal': PIXI.BLEND_MODES.NORMAL,
                     'add': PIXI.BLEND_MODES.ADD,
                     'screen': PIXI.BLEND_MODES.SCREEN,
-                    'multiply': PIXI.BLEND_MODES.MULTIPLY
+                    'multiply': PIXI.BLEND_MODES.MULTIPLY,
+                    'lighter': PIXI.BLEND_MODES.ADD
                 };
                 sprite.blendMode = blendMap[c.blendMode] || PIXI.BLEND_MODES.NORMAL;
                 layer.container.addChild(sprite);
 
                 const p = {
+                    id: Math.random() * 1000, // ID Único para Jitter
                     sprite: sprite,
                     layer: layer,
                     active: true,
@@ -357,6 +348,7 @@
 
                 p.x = sx; p.y = sy; p.z = sz; p.emissionAngle = ea;
 
+                // Nueva Física: Velocidad Base + Random
                 const baseSpd = c.speed.value !== undefined ? c.speed.value : 100;
                 const randSpd = c.speed.random !== undefined ? c.speed.random : 0;
                 const spd = baseSpd + (Math.random() * randSpd);
@@ -381,6 +373,7 @@
                 p.age += dt;
                 if (p.age >= p.life) { p.active = false; return; }
 
+                // Física
                 p.vx += c.gravity.x * dt;
                 p.vy += c.gravity.y * dt;
                 p.x += p.vx * dt;
@@ -390,6 +383,13 @@
                 const t = p.age / p.life;
                 let currentScale = p.scaleStart * (1 - t) + p.scaleEnd * t;
 
+                // Animación: Pulso
+                if (c.anim && c.anim.pulse && c.anim.pulse.size > 0) {
+                    const sine = Math.sin(p.age * (c.anim.pulse.speed || 1) * 5);
+                    currentScale *= (1 + sine * c.anim.pulse.size);
+                }
+
+                // Opacidad
                 let currentAlpha = 1;
                 if (c.opacityGraph && c.opacityGraph.active) {
                     let gt = p.age;
@@ -400,19 +400,31 @@
                     currentAlpha = p.alphaStart * (1 - t) + p.alphaEnd * t;
                 }
 
+                // Color y Flash
+                let r = 255, g = 255, b = 255;
                 if (c.colorGraph && c.colorGraph.active) {
                     let gt = p.age;
                     const dur = c.colorGraph.linkToLife ? p.life : c.colorGraph.duration;
                     if (c.colorGraph.loop) gt = gt % dur; else if (gt > dur) gt = dur;
+                    
                     const colData = this.evaluateColorGraph(c.colorGraph.nodes, gt / dur);
+                    r = colData.r; g = colData.g; b = colData.b;
+
                     const i = colData.i;
-                    let r = colData.r, g = colData.g, b = colData.b;
                     if (i > 0) { r += (255 - r) * i; g += (255 - g) * i; b += (255 - b) * i; } 
                     else if (i < 0) { const f = 1 + i; r *= f; g *= f; b *= f; }
-                    p.sprite.tint = (Math.floor(r) << 16) + (Math.floor(g) << 8) + Math.floor(b);
-                } else {
-                    p.sprite.tint = 0xFFFFFF;
                 }
+
+                // Animación: Flash (Brillo)
+                if (c.anim && c.anim.flash && c.anim.flash.mag > 0) {
+                     const flashSine = (Math.sin(p.age * (c.anim.flash.speed || 1) * 5) + 1) / 2;
+                     const intensity = flashSine * c.anim.flash.mag;
+                     r += (255 - r) * intensity;
+                     g += (255 - g) * intensity;
+                     b += (255 - b) * intensity;
+                }
+
+                p.sprite.tint = (Math.floor(r) << 16) + (Math.floor(g) << 8) + Math.floor(b);
 
                 if (!c.opacityGraph || !c.opacityGraph.active) currentAlpha *= c.globalOpacity;
                 p.sprite.alpha = Math.max(0, Math.min(1, currentAlpha));
@@ -421,7 +433,16 @@
                 if (c.geometry.type === 'sphere') { perspectiveScale = 1 + (p.z / 300); }
 
                 p.sprite.scale.set(currentScale * perspectiveScale * p.sizeMult);
-                p.sprite.position.set(p.x, p.y);
+
+                // Animación: Jitter (Temblor)
+                let jx = 0, jy = 0;
+                if (c.anim && c.anim.jitter && c.anim.jitter.radius > 0) {
+                    const jSpeed = (c.anim.jitter.speed || 1) * 2;
+                    jx = Math.sin(p.age * jSpeed + p.id) * c.anim.jitter.radius;
+                    jy = Math.cos(p.age * jSpeed + p.id * 0.5) * c.anim.jitter.radius;
+                }
+
+                p.sprite.position.set(p.x + jx, p.y + jy);
 
                 const tCfg = c.transform;
                 if (tCfg.radialLock) {
@@ -508,7 +529,6 @@
         const uiSelect = document.getElementById('json-select');
         const btnPrev = document.getElementById('btn-prev');
         const btnNext = document.getElementById('btn-next');
-        const btnCenter = document.getElementById('btn-center');
         const lblTitle = document.getElementById('effect-title');
         const lblCounter = document.getElementById('effect-counter');
         const loadingIndicator = document.getElementById('loading');
@@ -538,9 +558,6 @@
                 if (activeRuntime) activeRuntime.destroy();
                 activeRuntime = new PixiParticleRuntime(app.stage, jsonData);
                 
-                // Aseguramos centrado inmediato al cargar
-                forceResize();
-
                 currentIndex = index;
                 uiSelect.value = index;
                 lblTitle.innerText = jsonData.name || target.name;
@@ -570,27 +587,11 @@
             if (currentIndex < AVAILABLE_EXAMPLES.length - 1) loadExample(currentIndex + 1);
         });
 
-        // Evento del botón de centrar
-        btnCenter.addEventListener('click', () => {
-            if (activeRuntime) {
-                activeRuntime.setEmitterPos(window.innerWidth / 2, window.innerHeight / 2);
-            }
-        });
-
-        // Lógica de redimensionamiento centralizada
-        function forceResize() {
-            const w = window.innerWidth;
-            const h = window.innerHeight;
-            app.renderer.resize(w, h);
+        window.addEventListener('resize', () => {
+            app.renderer.resize(window.innerWidth, window.innerHeight);
             if(activeRuntime) {
-                activeRuntime.setEmitterPos(w / 2, h / 2);
+                activeRuntime.setEmitterPos(window.innerWidth/2, window.innerHeight/2);
             }
-        }
-
-        window.addEventListener('resize', forceResize);
-        window.addEventListener('orientationchange', () => {
-            // Breve retraso para asegurar que el navegador actualizó las dimensiones
-            setTimeout(forceResize, 100);
         });
 
         app.ticker.add((delta) => {
